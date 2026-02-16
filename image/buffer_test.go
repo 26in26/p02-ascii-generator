@@ -37,11 +37,11 @@ func TestNewBufferDimensionsAndStride(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			buf := image.NewBuffer(tc.width, tc.height, tc.format)
 
-			if buf.Width() != tc.width {
-				t.Fatalf("width = %d, want %d", buf.Width(), tc.width)
+			if buf.Width != tc.width {
+				t.Fatalf("width = %d, want %d", buf.Width, tc.width)
 			}
-			if buf.Height() != tc.height {
-				t.Fatalf("height = %d, want %d", buf.Height(), tc.height)
+			if buf.Height != tc.height {
+				t.Fatalf("height = %d, want %d", buf.Height, tc.height)
 			}
 			if buf.Stride() != tc.stride {
 				t.Fatalf("stride = %d, want %d", buf.Stride(), tc.stride)
@@ -121,8 +121,8 @@ func TestNewBufferDataSize(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			buf := image.NewBuffer(tc.width, tc.height, tc.format)
 
-			if len(buf.Data()) != tc.targetSize {
-				t.Fatalf("data size = %d, want %d", len(buf.Data()), tc.targetSize)
+			if len(buf.Data) != tc.targetSize {
+				t.Fatalf("data size = %d, want %d", len(buf.Data), tc.targetSize)
 			}
 		})
 	}
