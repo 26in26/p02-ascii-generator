@@ -1,8 +1,7 @@
 package ascii
 
 import (
-	"fmt"
-	"math"
+	"strconv"
 	"strings"
 
 	"github.com/26in26/p02-ascii-generator/pipeline"
@@ -19,16 +18,31 @@ const (
 	Monochrome
 )
 
-func getAngleChar(angle float64) byte {
-	if (22.5 <= angle && angle <= 67.5) || (-157.5 <= angle && angle <= -112.5) {
-		return '\\'
-	} else if (67.5 <= angle && angle <= 112.5) || (-112.5 <= angle && angle <= -67.5) {
-		return '_'
-	} else if (112.5 <= angle && angle <= 157.5) || (-67.5 <= angle && angle <= -22.5) {
-		return '/'
-	} else {
+func getAngleChar(gx, gy int) byte {
+	// Fast angle approximation using integer math to avoid expensive Atan2.
+	// We classify the gradient into one of four directions.
+	abs_gx := gx
+	if abs_gx < 0 {
+		abs_gx = -abs_gx
+	}
+	abs_gy := gy
+	if abs_gy < 0 {
+		abs_gy = -abs_gy
+	}
+
+	// If gradient is mostly horizontal -> vertical edge
+	if abs_gx > abs_gy<<1 { // abs_gx > 2 * abs_gy
 		return '|'
 	}
+	// If gradient is mostly vertical -> horizontal edge
+	if abs_gy > abs_gx<<1 { // abs_gy > 2 * abs_gx
+		return '_'
+	}
+	// Otherwise, it's a diagonal edge
+	if (gx > 0) == (gy > 0) { // gx and gy have the same sign
+		return '\\'
+	}
+	return '/' // gx and gy have different signs
 }
 
 func pixelToASCII(gray byte, invert bool) byte {
@@ -64,33 +78,41 @@ func (s *AsciiStage) Process(ctx *pipeline.FrameContext) {
 	var asciiArt strings.Builder
 	asciiArt.Grow((workingImg.Width + 1) * workingImg.Height)
 
+	grayData := grayImg.Data
+	workingData := workingImg.Data
+
 	var r, g, b byte = 0, 0, 0
+	index := 0
 
 	for y := 0; y < grayImg.Height; y++ {
 		for x := 0; x < grayImg.Width; x++ {
 			var char byte
 
-			index := y*grayImg.Width + x
-
 			gx := gradient[index].X
 			gy := gradient[index].Y
 			if gx*gx+gy*gy > s.squareEdgeThreshold {
-				angle := math.Atan2(float64(gy), float64(gx)) * 180.0 / math.Pi
-				char = getAngleChar(angle)
+				char = getAngleChar(gx, gy)
 			} else {
-				char = pixelToASCII(grayImg.Data[index], s.invert)
+				char = pixelToASCII(grayData[index], s.invert)
 			}
 
-			if r != workingImg.Data[index*bpp+0] || g != workingImg.Data[index*bpp+1] || b != workingImg.Data[index*bpp+2] {
-				r = workingImg.Data[index*bpp+0]
-				g = workingImg.Data[index*bpp+1]
-				b = workingImg.Data[index*bpp+2]
+			rgbIndex := index * bpp
+			curR, curG, curB := workingData[rgbIndex], workingData[rgbIndex+1], workingData[rgbIndex+2]
 
-				asciiArt.WriteString(fmt.Sprintf("\x1b[38;2;%d;%d;%dm", r, g, b))
+			if r != curR || g != curG || b != curB {
+				r, g, b = curR, curG, curB
+
+				asciiArt.WriteString("\x1b[38;2;")
+				asciiArt.WriteString(strconv.Itoa(int(r)))
+				asciiArt.WriteByte(';')
+				asciiArt.WriteString(strconv.Itoa(int(g)))
+				asciiArt.WriteByte(';')
+				asciiArt.WriteString(strconv.Itoa(int(b)))
+				asciiArt.WriteByte('m')
 			}
 
 			asciiArt.WriteByte(char)
-
+			index++
 		}
 
 		asciiArt.WriteByte('\n')
