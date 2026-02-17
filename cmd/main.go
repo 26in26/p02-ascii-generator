@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/26in26/p02-ascii-generator/mapping"
+	"github.com/26in26/p02-ascii-generator/stages/ascii"
 	"github.com/26in26/p02-ascii-generator/stages/edge"
 	"github.com/26in26/p02-ascii-generator/stages/grayscale"
 	"github.com/26in26/p02-ascii-generator/stages/resize"
@@ -33,22 +33,24 @@ func NewTestImage(w, h int) *image.Buffer {
 
 func main() {
 	// Run pipeline and count iterations in 30 seconds
-	pngImage, _ := imageio.LoadPNG("./phinix.png")
+	pngImage, _ := imageio.LoadPNG("./or.png")
 	src := imageio.ConvertToBuffer(pngImage, image.FormatRGB)
 
 	resizeStage := resize.NewResizeStage(190, 100).PreserveAspectRatio(src.Width, src.Height, true, false)
 	grayscaleStage := grayscale.NewGrayscaleStage()
 
 	edgeDetection := edge.NewSobelEdgeDetectionStage()
+	asciiStage := ascii.NewAsciiStage(false, 23)
 
 	// Create pipeline
 	p := pipeline.New(
 		resizeStage,
 		grayscaleStage,
 		edgeDetection,
+		asciiStage,
 	)
 
-	mapping.PrintAsASCII(p.Run(src), edgeDetection.Gradient)
+	p.Run(src)
 	// benchmark()
 
 }
@@ -62,6 +64,7 @@ func benchmark() {
 	resizeStage := resize.NewResizeStage(190, 100).PreserveAspectRatio(src.Width, src.Height, true, false)
 	grayscaleStage := grayscale.NewGrayscaleStage()
 	edgeDetection := edge.NewSobelEdgeDetectionStage()
+	asciiStage := ascii.NewAsciiStage(false, 23)
 
 	for time.Since(start) < 10*time.Second {
 
@@ -70,10 +73,12 @@ func benchmark() {
 			resizeStage,
 			grayscaleStage,
 			edgeDetection,
+			asciiStage,
 		)
 
-		mapping.PrintAsASCII(p.Run(src), edgeDetection.Gradient)
+		p.Run(src)
 		iterations++
+
 	}
 
 	fmt.Printf("Completed %d iterations in 10 seconds. FPS: %f\n", iterations, float64(iterations)/10)

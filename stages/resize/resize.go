@@ -1,6 +1,9 @@
 package resize
 
-import "github.com/26in26/p02-ascii-generator/image"
+import (
+	"github.com/26in26/p02-ascii-generator/image"
+	"github.com/26in26/p02-ascii-generator/pipeline"
+)
 
 const CHAR_ASPECT_RATIO = 2
 
@@ -41,7 +44,8 @@ func (s *ResizeStage) PreserveAspectRatio(w, h int, saveWidth, saveHeight bool,
 	return s
 }
 
-func (s *ResizeStage) Process(src *image.Buffer) *image.Buffer {
+func (s *ResizeStage) Process(ctx *pipeline.FrameContext) {
+	src := ctx.SourceImage
 	if src == nil {
 		panic("resize stage must receive non-nil image buffer")
 	}
@@ -87,5 +91,5 @@ func (s *ResizeStage) Process(src *image.Buffer) *image.Buffer {
 		}
 	}
 
-	return dst
+	ctx.WorkingImage = dst
 }

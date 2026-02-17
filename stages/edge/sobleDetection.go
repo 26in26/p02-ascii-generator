@@ -2,24 +2,20 @@ package edge
 
 import (
 	"github.com/26in26/p02-ascii-generator/image"
+	"github.com/26in26/p02-ascii-generator/pipeline"
+	"github.com/26in26/p02-ascii-generator/utils"
 )
 
-type Vector struct {
-	X int
-	Y int
-}
-
-type Gradient = []Vector
-
 type sobelEdgeDetectionStage struct {
-	Gradient Gradient
+	Gradient utils.Gradient
 }
 
 func NewSobelEdgeDetectionStage() *sobelEdgeDetectionStage {
 	return &sobelEdgeDetectionStage{}
 }
 
-func (s *sobelEdgeDetectionStage) Process(src *image.Buffer) *image.Buffer {
+func (s *sobelEdgeDetectionStage) Process(ctx *pipeline.FrameContext) {
+	src := ctx.GrayImage
 	if src == nil {
 		panic("sobel edge detection stage must receive non-nil image buffer")
 	}
@@ -32,7 +28,7 @@ func (s *sobelEdgeDetectionStage) Process(src *image.Buffer) *image.Buffer {
 	srcData := src.Data
 	width := src.Width
 	height := src.Height
-	s.Gradient = make(Gradient, len(srcData))
+	s.Gradient = make(utils.Gradient, len(srcData))
 	gradData := s.Gradient
 
 	i := width + 1
@@ -55,7 +51,7 @@ func (s *sobelEdgeDetectionStage) Process(src *image.Buffer) *image.Buffer {
 			// scaling down the vectors by 16 ( >> 4)
 			gx := ((int(p2) + (int(p5) << 1) + int(p8)) - (int(p0) + (int(p3) << 1) + int(p6))) >> 4
 			gy := ((int(p6) + (int(p7) << 1) + int(p8)) - (int(p0) + (int(p1) << 1) + int(p2))) >> 4
-			gradData[i] = Vector{gx, gy}
+			gradData[i] = utils.Vector{X: gx, Y: gy}
 
 			i++
 		}
@@ -64,5 +60,5 @@ func (s *sobelEdgeDetectionStage) Process(src *image.Buffer) *image.Buffer {
 		i += 2
 	}
 
-	return src
+	ctx.GradientMap = s.Gradient
 }

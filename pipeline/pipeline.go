@@ -1,23 +1,23 @@
 package pipeline
 
-import "github.com/26in26/p02-ascii-generator/image"
+import (
+	"github.com/26in26/p02-ascii-generator/image"
+)
 
 type Stage interface {
-	Process(img *image.Buffer) *image.Buffer
+	Process(ctx *FrameContext)
 }
-
 type Pipeline struct {
-	stages []Stage
+	Stages []Stage
 }
 
-func New(stages ...Stage) *Pipeline {
-	return &Pipeline{stages: stages}
+func New(process ...Stage) *Pipeline {
+	return &Pipeline{Stages: process}
 }
 
-func (p *Pipeline) Run(img *image.Buffer) *image.Buffer {
-	out := img
-	for _, stage := range p.stages {
-		out = stage.Process(out)
+func (p *Pipeline) Run(img *image.Buffer) {
+	ctx := NewFrameContext(img)
+	for _, stage := range p.Stages {
+		stage.Process(ctx)
 	}
-	return out
 }
