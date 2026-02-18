@@ -1,24 +1,20 @@
 package ascii
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
-
-	"github.com/26in26/p02-ascii-generator/pipeline"
-	"github.com/26in26/p02-ascii-generator/utils"
 )
 
 const DENSITY = " .-=+*x#$&X@"
 const RESET = "\x1b[0m"
 
-type ColorMode uint8
-
-const (
-	FullColor ColorMode = iota
-	RetroColor
-	Monochrome
-)
+func pixelToASCII(gray byte, invert bool) byte {
+	index := int((float64(gray) / 255) * float64(len(DENSITY)-1))
+	if invert {
+		index = (len(DENSITY) - 1) - index
+	}
+	return DENSITY[index]
+}
 
 func getAngleChar(gx, gy int) byte {
 	// Fast angle approximation using integer math to avoid expensive Atan2.
@@ -47,82 +43,31 @@ func getAngleChar(gx, gy int) byte {
 	return '/' // gx and gy have different signs
 }
 
-func pixelToASCII(gray byte, invert bool) byte {
-	index := int((float64(gray) / 255) * float64(len(DENSITY)-1))
-	if invert {
-		index = (len(DENSITY) - 1) - index
+type ColorMode uint8
+
+const (
+	FullColor ColorMode = iota
+	RetroColor
+	Monochrome
+)
+
+// renderFullColor writes a 24-bit ANSI color escape code if the color has changed.
+func renderFullColor(builder *strings.Builder, r, g, b byte, data []byte, rgbIndex int) (byte, byte, byte) {
+	curR, curG, curB := data[rgbIndex], data[rgbIndex+1], data[rgbIndex+2]
+	if r != curR || g != curG || b != curB {
+		r, g, b = curR, curG, curB
+		builder.WriteString("\x1b[38;2;")
+		builder.WriteString(strconv.Itoa(int(r)))
+		builder.WriteByte(';')
+		builder.WriteString(strconv.Itoa(int(g)))
+		builder.WriteByte(';')
+		builder.WriteString(strconv.Itoa(int(b)))
+		builder.WriteByte('m')
 	}
-	return DENSITY[index]
+	return r, g, b
 }
 
-type AsciiStage struct {
-	invert              bool
-	squareEdgeThreshold int
-}
-
-func NewAsciiStage(invert bool, edgeThreshold int) *AsciiStage {
-	return &AsciiStage{
-		invert:              invert,
-		squareEdgeThreshold: edgeThreshold * edgeThreshold,
-	}
-}
-
-func (s *AsciiStage) Process(ctx *pipeline.FrameContext) error {
-	workingImg := ctx.WorkingImage
-	if workingImg == nil {
-		return fmt.Errorf("ascii stage: %w", utils.ErrBufferNotInitialized)
-	}
-
-	grayImg := ctx.GrayImage
-	gradient := ctx.GradientMap
-
-	bpp := workingImg.Channels
-	var asciiArt strings.Builder
-	asciiArt.Grow((workingImg.Width + 1) * workingImg.Height)
-
-	grayData := grayImg.Data
-	workingData := workingImg.Data
-
-	var r, g, b byte = 0, 0, 0
-	index := 0
-
-	for y := 0; y < grayImg.Height; y++ {
-		for x := 0; x < grayImg.Width; x++ {
-			var char byte
-
-			gx := gradient[index].X
-			gy := gradient[index].Y
-			if gx*gx+gy*gy > s.squareEdgeThreshold {
-				char = getAngleChar(gx, gy)
-			} else {
-				char = pixelToASCII(grayData[index], s.invert)
-			}
-
-			rgbIndex := index * bpp
-			curR, curG, curB := workingData[rgbIndex], workingData[rgbIndex+1], workingData[rgbIndex+2]
-
-			if r != curR || g != curG || b != curB {
-				r, g, b = curR, curG, curB
-
-				asciiArt.WriteString("\x1b[38;2;")
-				asciiArt.WriteString(strconv.Itoa(int(r)))
-				asciiArt.WriteByte(';')
-				asciiArt.WriteString(strconv.Itoa(int(g)))
-				asciiArt.WriteByte(';')
-				asciiArt.WriteString(strconv.Itoa(int(b)))
-				asciiArt.WriteByte('m')
-			}
-
-			asciiArt.WriteByte(char)
-			index++
-		}
-
-		asciiArt.WriteByte('\n')
-	}
-	asciiArt.WriteString(RESET)
-
-	ctx.ASCIIOutput = asciiArt.String()
-	println(ctx.ASCIIOutput)
-
-	return nil
+// renderMonochrome does nothing, effectively producing monochrome output.
+func renderMonochrome(builder *strings.Builder, r, g, b byte, data []byte, rgbIndex int) (byte, byte, byte) {
+	return r, g, b
 }
