@@ -33,34 +33,34 @@ func NewTestImage(w, h int) *image.Buffer {
 
 func main() {
 	// Run pipeline and count iterations in 30 seconds
-	pngImage, _ := imageio.LoadPNG("./image.png")
-	src, err := imageio.ConvertToBuffer(pngImage, image.FormatRGB)
+	// pngImage, _ := imageio.LoadPNG("./image.png")
+	// src, err := imageio.ConvertToBuffer(pngImage, image.FormatRGB)
 
-	if err != nil {
-		return
-	}
-	resizeStage, err := resize.NewResizeStage(resize.WithWidth(190),
-		resize.WithAspectRatio(src.Width, src.Height, true),
-	)
+	// if err != nil {
+	// 	return
+	// }
+	// resizeStage, err := resize.NewResizeStage(resize.WithWidth(190),
+	// 	resize.WithAspectRatio(src.Width, src.Height, true),
+	// )
 
-	if err != nil {
-		return
-	}
+	// if err != nil {
+	// 	return
+	// }
 
-	grayscaleStage := grayscale.NewGrayscaleStage()
+	// grayscaleStage := grayscale.NewGrayscaleStage()
 
-	edgeDetection := edge.NewSobelEdgeDetectionStage()
-	asciiStage := ascii.NewAsciiStage(ascii.WithEdgeThreshold(23), ascii.WithColorMode(ascii.FullColor), ascii.WithInvert(false))
+	// edgeDetection := edge.NewSobelEdgeDetectionStage()
+	// asciiStage := ascii.NewAsciiStage(ascii.WithEdgeThreshold(23), ascii.WithColorMode(ascii.FullColor), ascii.WithInvert(false))
 
-	// Create pipeline
-	p := pipeline.New(
-		resizeStage,
-		grayscaleStage,
-		edgeDetection,
-		asciiStage,
-	)
+	// // Create pipeline
+	// p := pipeline.New(
+	// 	resizeStage,
+	// 	grayscaleStage,
+	// 	edgeDetection,
+	// 	asciiStage,
+	// )
 
-	p.Run(src)
+	// p.Run(src)
 	// benchmark()
 
 	cmd.Execute()
