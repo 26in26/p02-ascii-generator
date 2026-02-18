@@ -4,14 +4,14 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/26in26/p02-ascii-generator/cmd"
+	"github.com/26in26/p02-ascii-generator/image"
+	"github.com/26in26/p02-ascii-generator/imageio"
+	"github.com/26in26/p02-ascii-generator/pipeline"
 	"github.com/26in26/p02-ascii-generator/stages/ascii"
 	"github.com/26in26/p02-ascii-generator/stages/edge"
 	"github.com/26in26/p02-ascii-generator/stages/grayscale"
 	"github.com/26in26/p02-ascii-generator/stages/resize"
-
-	"github.com/26in26/p02-ascii-generator/image"
-	"github.com/26in26/p02-ascii-generator/imageio"
-	"github.com/26in26/p02-ascii-generator/pipeline"
 )
 
 func NewTestImage(w, h int) *image.Buffer {
@@ -50,7 +50,7 @@ func main() {
 	grayscaleStage := grayscale.NewGrayscaleStage()
 
 	edgeDetection := edge.NewSobelEdgeDetectionStage()
-	asciiStage := ascii.NewAsciiStage(false, 23)
+	asciiStage := ascii.NewAsciiStage(ascii.WithEdgeThreshold(23), ascii.WithColorMode(ascii.FullColor), ascii.WithInvert(false))
 
 	// Create pipeline
 	p := pipeline.New(
@@ -62,6 +62,8 @@ func main() {
 
 	p.Run(src)
 	// benchmark()
+
+	cmd.Execute()
 
 }
 
@@ -85,7 +87,7 @@ func benchmark() {
 
 	grayscaleStage := grayscale.NewGrayscaleStage()
 	edgeDetection := edge.NewSobelEdgeDetectionStage()
-	asciiStage := ascii.NewAsciiStage(false, 23)
+	asciiStage := ascii.NewAsciiStage(ascii.WithEdgeThreshold(23))
 
 	for time.Since(start) < 10*time.Second {
 
