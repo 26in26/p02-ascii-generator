@@ -1,6 +1,8 @@
 package edge
 
 import (
+	"fmt"
+
 	"github.com/26in26/p02-ascii-generator/image"
 	"github.com/26in26/p02-ascii-generator/pipeline"
 	"github.com/26in26/p02-ascii-generator/utils"
@@ -14,15 +16,20 @@ func NewSobelEdgeDetectionStage() *sobelEdgeDetectionStage {
 	return &sobelEdgeDetectionStage{}
 }
 
-func (s *sobelEdgeDetectionStage) Process(ctx *pipeline.FrameContext) {
+func (s *sobelEdgeDetectionStage) Process(ctx *pipeline.FrameContext) error {
 	src := ctx.GrayImage
 	if src == nil {
-		panic("sobel edge detection stage must receive non-nil image buffer")
+		return fmt.Errorf("edge detection stage: %w", utils.ErrBufferNotInitialized)
 	}
 
 	// For performance, we first convert the image to grayscale.
 	if src.Format != image.FormatGray {
-		src = src.ToGray()
+		var err error
+		src, err = src.ToGray()
+		if err != nil {
+			return fmt.Errorf("edge detection stage: %w", err)
+		}
+
 	}
 
 	srcData := src.Data
@@ -61,4 +68,6 @@ func (s *sobelEdgeDetectionStage) Process(ctx *pipeline.FrameContext) {
 	}
 
 	ctx.GradientMap = s.Gradient
+
+	return nil
 }

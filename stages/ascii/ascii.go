@@ -1,10 +1,12 @@
 package ascii
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 
 	"github.com/26in26/p02-ascii-generator/pipeline"
+	"github.com/26in26/p02-ascii-generator/utils"
 )
 
 const DENSITY = " .-=+*x#$&X@"
@@ -65,10 +67,10 @@ func NewAsciiStage(invert bool, edgeThreshold int) *AsciiStage {
 	}
 }
 
-func (s *AsciiStage) Process(ctx *pipeline.FrameContext) {
+func (s *AsciiStage) Process(ctx *pipeline.FrameContext) error {
 	workingImg := ctx.WorkingImage
 	if workingImg == nil {
-		panic("ascii stage must receive non-nil image buffer")
+		return fmt.Errorf("ascii stage: %w", utils.ErrBufferNotInitialized)
 	}
 
 	grayImg := ctx.GrayImage
@@ -121,4 +123,6 @@ func (s *AsciiStage) Process(ctx *pipeline.FrameContext) {
 
 	ctx.ASCIIOutput = asciiArt.String()
 	println(ctx.ASCIIOutput)
+
+	return nil
 }

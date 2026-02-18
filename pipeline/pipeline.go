@@ -5,7 +5,7 @@ import (
 )
 
 type Stage interface {
-	Process(ctx *FrameContext)
+	Process(ctx *FrameContext) error
 }
 type Pipeline struct {
 	Stages []Stage
@@ -15,9 +15,14 @@ func New(process ...Stage) *Pipeline {
 	return &Pipeline{Stages: process}
 }
 
-func (p *Pipeline) Run(img *image.Buffer) {
+func (p *Pipeline) Run(img *image.Buffer) error {
 	ctx := NewFrameContext(img)
 	for _, stage := range p.Stages {
-		stage.Process(ctx)
+		err := stage.Process(ctx)
+		if err != nil {
+			return err
+		}
 	}
+
+	return nil
 }

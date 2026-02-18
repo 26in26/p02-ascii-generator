@@ -1,8 +1,11 @@
 package resize
 
 import (
+	"fmt"
+
 	"github.com/26in26/p02-ascii-generator/image"
 	"github.com/26in26/p02-ascii-generator/pipeline"
+	"github.com/26in26/p02-ascii-generator/utils"
 )
 
 const CHAR_ASPECT_RATIO = 2
@@ -12,45 +15,34 @@ type ResizeStage struct {
 	TargetHeight int
 }
 
-func NewResizeStage(w, h int) *ResizeStage {
-	if w <= 0 || h <= 0 {
-		panic("resize stage width and height must be > 0")
+func NewResizeStage(opts ...optFunc) (*ResizeStage, error) {
+	o := defaultOpts()
+
+	for _, opt := range opts {
+		opt(&o)
+	}
+
+	if o.width <= 0 || o.height <= 0 {
+		return nil, fmt.Errorf("resize stage: %w", utils.ErrInvalidDimensions)
 	}
 
 	return &ResizeStage{
-		TargetWidth:  w,
-		TargetHeight: h,
-	}
+		TargetWidth:  o.width,
+		TargetHeight: o.height,
+	}, nil
 }
 
-func (s *ResizeStage) PreserveAspectRatio(w, h int, saveWidth, saveHeight bool,
-) *ResizeStage {
-
-	aspectRatio := float64(w) / float64(h) * CHAR_ASPECT_RATIO
-
-	if saveWidth {
-		// adjust height according to aspect ratio
-		s.TargetHeight = int(float64(s.TargetWidth) / aspectRatio)
-		if s.TargetHeight <= 0 {
-			s.TargetHeight = 1
-		}
-	} else if saveHeight {
-		// adjust width according to aspect ratio
-		s.TargetWidth = int(float64(s.TargetHeight) * aspectRatio)
-		if s.TargetWidth <= 0 {
-			s.TargetWidth = 1
-		}
-	}
-	return s
-}
-
-func (s *ResizeStage) Process(ctx *pipeline.FrameContext) {
+func (s *ResizeStage) Process(ctx *pipeline.FrameContext) error {
 	src := ctx.SourceImage
 	if src == nil {
-		panic("resize stage must receive non-nil image buffer")
+		return fmt.Errorf("resize stage: %w", utils.ErrBufferNotInitialized)
 	}
 
-	dst := image.NewBuffer(s.TargetWidth, s.TargetHeight, src.Format)
+	dst, err := image.NewBuffer(s.TargetWidth, s.TargetHeight, src.Format)
+
+	if err != nil {
+		return fmt.Errorf("resize stage: %w", err)
+	}
 
 	bpp := src.Channels
 
@@ -92,4 +84,6 @@ func (s *ResizeStage) Process(ctx *pipeline.FrameContext) {
 	}
 
 	ctx.WorkingImage = dst
+
+	return nil
 }

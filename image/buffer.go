@@ -1,5 +1,7 @@
 package image
 
+import "github.com/26in26/p02-ascii-generator/utils"
+
 type Buffer struct {
 	Width  int
 	Height int
@@ -10,9 +12,9 @@ type Buffer struct {
 	Data     []byte
 }
 
-func NewBuffer(width, height int, format Format) *Buffer {
+func NewBuffer(width, height int, format Format) (*Buffer, error) {
 	if width < 0 || height < 0 {
-		panic("image: negative width or height")
+		return nil, utils.ErrInvalidDimensions
 	}
 
 	bpp := format.BytesPerPixel()
@@ -25,7 +27,7 @@ func NewBuffer(width, height int, format Format) *Buffer {
 		Format:   format,
 		Channels: bpp,
 		Data:     make([]byte, stride*height),
-	}
+	}, nil
 
 }
 

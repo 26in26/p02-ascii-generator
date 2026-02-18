@@ -1,17 +1,23 @@
 package grayscale
 
 import (
+	"fmt"
+
 	"github.com/26in26/p02-ascii-generator/pipeline"
+	"github.com/26in26/p02-ascii-generator/utils"
 )
 
 type grayscaleStage struct{}
 
-func (s *grayscaleStage) Process(ctx *pipeline.FrameContext) {
+func (s *grayscaleStage) Process(ctx *pipeline.FrameContext) error {
 	if ctx.WorkingImage == nil {
-		panic("grayscale stage must receive non-nil image buffer")
+		return fmt.Errorf("grayscale stage: %w", utils.ErrBufferNotInitialized)
 	}
 
-	ctx.GrayImage = ctx.WorkingImage.ToGray()
+	var err error
+	ctx.GrayImage, err = ctx.WorkingImage.ToGray()
+
+	return err
 }
 
 func NewGrayscaleStage() *grayscaleStage {

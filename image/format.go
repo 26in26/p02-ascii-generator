@@ -6,7 +6,6 @@ const (
 	FormatRGB Format = iota
 	FormatRGBA
 	FormatGray
-	FormatFloatGray
 )
 
 func (f Format) BytesPerPixel() int {
@@ -17,8 +16,6 @@ func (f Format) BytesPerPixel() int {
 		return 4
 	case FormatGray:
 		return 1
-	case FormatFloatGray:
-		return 4
 	default:
 		panic("image: unknown format")
 	}

@@ -15,7 +15,7 @@ import (
 )
 
 func NewTestImage(w, h int) *image.Buffer {
-	img := image.NewBuffer(w, h, image.FormatRGB)
+	img, _ := image.NewBuffer(w, h, image.FormatRGB)
 	bpp := img.Channels
 
 	for y := 0; y < h; y++ {
@@ -33,10 +33,20 @@ func NewTestImage(w, h int) *image.Buffer {
 
 func main() {
 	// Run pipeline and count iterations in 30 seconds
-	pngImage, _ := imageio.LoadPNG("./or.png")
-	src := imageio.ConvertToBuffer(pngImage, image.FormatRGB)
+	pngImage, _ := imageio.LoadPNG("./image.png")
+	src, err := imageio.ConvertToBuffer(pngImage, image.FormatRGB)
 
-	resizeStage := resize.NewResizeStage(190, 100).PreserveAspectRatio(src.Width, src.Height, true, false)
+	if err != nil {
+		return
+	}
+	resizeStage, err := resize.NewResizeStage(resize.WithWidth(190),
+		resize.WithAspectRatio(src.Width, src.Height, true),
+	)
+
+	if err != nil {
+		return
+	}
+
 	grayscaleStage := grayscale.NewGrayscaleStage()
 
 	edgeDetection := edge.NewSobelEdgeDetectionStage()
@@ -59,9 +69,20 @@ func benchmark() {
 	start := time.Now()
 	iterations := 0
 	pngImage, _ := imageio.LoadPNG("./screenshot.png")
-	src := imageio.ConvertToBuffer(pngImage, image.FormatRGB)
+	src, err := imageio.ConvertToBuffer(pngImage, image.FormatRGB)
 
-	resizeStage := resize.NewResizeStage(190, 100).PreserveAspectRatio(src.Width, src.Height, true, false)
+	if err != nil {
+		return
+	}
+
+	resizeStage, err := resize.NewResizeStage(resize.WithWidth(190),
+		resize.WithAspectRatio(src.Width, src.Height, true),
+	)
+
+	if err != nil {
+		return
+	}
+
 	grayscaleStage := grayscale.NewGrayscaleStage()
 	edgeDetection := edge.NewSobelEdgeDetectionStage()
 	asciiStage := ascii.NewAsciiStage(false, 23)

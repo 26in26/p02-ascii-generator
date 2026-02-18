@@ -8,10 +8,15 @@ import (
 )
 
 // Todo: support formats, currently only RGB & RGBA
-func ConvertToBuffer(img image.Image, f internalImage.Format) *internalImage.Buffer {
+func ConvertToBuffer(img image.Image, f internalImage.Format) (*internalImage.Buffer, error) {
 	bounds := img.Bounds()
 	w, h := bounds.Dx(), bounds.Dy()
-	buf := internalImage.NewBuffer(w, h, f)
+	buf, err := internalImage.NewBuffer(w, h, f)
+
+	if err != nil {
+		return nil, err
+	}
+
 	bpp := buf.Channels
 
 	for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
@@ -27,5 +32,5 @@ func ConvertToBuffer(img image.Image, f internalImage.Format) *internalImage.Buf
 		}
 	}
 
-	return buf
+	return buf, nil
 }

@@ -1,9 +1,11 @@
 package image_test
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/26in26/p02-ascii-generator/image"
+	"github.com/26in26/p02-ascii-generator/utils"
 )
 
 func TestNewBufferDimensionsAndStride(t *testing.T) {
@@ -35,7 +37,7 @@ func TestNewBufferDimensionsAndStride(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			buf := image.NewBuffer(tc.width, tc.height, tc.format)
+			buf, _ := image.NewBuffer(tc.width, tc.height, tc.format)
 
 			if buf.Width != tc.width {
 				t.Fatalf("width = %d, want %d", buf.Width, tc.width)
@@ -73,13 +75,13 @@ func TestInvalidDimensionsPanics(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			defer func() {
-				if r := recover(); r == nil {
-					t.Fatalf("expected panic due to invalid dimensions, but got none")
-				}
-			}()
 
-			image.NewBuffer(tc.width, tc.height, image.FormatRGB)
+			_, err := image.NewBuffer(tc.width, tc.height, image.FormatRGB)
+			if err == nil {
+				t.Fatal("expected error, got nil")
+			} else if !errors.Is(err, utils.ErrInvalidDimensions) {
+				t.Fatalf("Expexeted ErrInvalidDimensions, got %v", err)
+			}
 		})
 	}
 }
@@ -119,7 +121,7 @@ func TestNewBufferDataSize(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			buf := image.NewBuffer(tc.width, tc.height, tc.format)
+			buf, _ := image.NewBuffer(tc.width, tc.height, tc.format)
 
 			if len(buf.Data) != tc.targetSize {
 				t.Fatalf("data size = %d, want %d", len(buf.Data), tc.targetSize)

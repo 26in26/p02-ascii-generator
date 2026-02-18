@@ -1,7 +1,12 @@
 package image
 
-func (b *Buffer) ToGray() *Buffer {
-	dst := NewBuffer(b.Width, b.Height, FormatGray)
+func (b *Buffer) ToGray() (*Buffer, error) {
+	dst, err := NewBuffer(b.Width, b.Height, FormatGray)
+
+	if err != nil {
+		return nil, err
+	}
+
 	bpp := b.Channels
 	srcData := b.Data
 	dstData := dst.Data
@@ -22,5 +27,5 @@ func (b *Buffer) ToGray() *Buffer {
 		dstIndex++
 	}
 
-	return dst
+	return dst, nil
 }
