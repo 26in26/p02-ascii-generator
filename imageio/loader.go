@@ -2,27 +2,20 @@ package imageio
 
 import (
 	"image"
-	"image/jpeg"
-	"image/png"
+	_ "image/jpeg"
+	_ "image/png"
 	"os"
 )
 
-func LoadPNG(path string) (image.Image, error) {
+func LoadImage(path string) (image.Image, error) {
 	file, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
 	defer file.Close()
 
-	return png.Decode(file)
-}
+	decodedImg, _, err := image.Decode(file)
 
-func LoadJPEG(path string) (image.Image, error) {
-	file, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
+	return decodedImg, err
 
-	return jpeg.Decode(file)
 }
