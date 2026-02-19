@@ -4,10 +4,11 @@ import (
 	"image"
 	_ "image/jpeg"
 	_ "image/png"
+	"io"
 	"os"
 )
 
-func LoadImage(path string) (image.Image, error) {
+func LoadImageFromFile(path string) (image.Image, error) {
 	file, err := os.Open(path)
 	if err != nil {
 		return nil, err
@@ -18,4 +19,10 @@ func LoadImage(path string) (image.Image, error) {
 
 	return decodedImg, err
 
+}
+
+func LoadImageFromStream(r io.Reader) (image.Image, error) {
+	decodedImg, _, err := image.Decode(r)
+
+	return decodedImg, err
 }

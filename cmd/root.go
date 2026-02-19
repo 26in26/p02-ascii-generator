@@ -3,41 +3,35 @@ package cmd
 import (
 	"os"
 
+	"github.com/26in26/p02-ascii-generator/internal/cli/info"
+	"github.com/26in26/p02-ascii-generator/internal/cli/render"
+	"github.com/26in26/p02-ascii-generator/internal/cli/version"
 	"github.com/spf13/cobra"
 )
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "ascii-gen",
-	Short: "A brief description of your application",
-	Long: `A longer description that spans multiple lines and likely contains
-examples and usage of using your application. For example:
+	Short: "A high-performance CLI tool for converting images to ASCII art",
+	Long: `ASCII Generator is a blazing fast, highly configurable command-line tool that transforms your images into stunning ASCII art.
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
-	// Uncomment the following line if your bare application
-	// has an action associated with it:
-	// Run: func(cmd *cobra.Command, args []string) { },
+Built with performance in mind, it utilizes advanced image processing techniques including:
+  - Sobel Edge Detection for crisp structural details
+  - 24-bit TrueColor support for vibrant output
+  - Optimized integer arithmetic for maximum speed
+
+Whether you want retro monochrome aesthetics or full-color text representations, ascii-gen delivers high-quality results instantly.`,
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
+	rootCmd.AddCommand(info.NewCommand())
+	rootCmd.AddCommand(render.NewCommand())
+	rootCmd.AddCommand(version.NewCommand())
+
 	err := rootCmd.Execute()
 	if err != nil {
 		os.Exit(1)
 	}
-}
-
-func init() {
-	// Here you will define your flags and configuration settings.
-	// Cobra supports persistent flags, which, if defined here,
-	// will be global for your application.
-
-	// rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.p02-ascii-generator.yaml)")
-
-	// Cobra also supports local flags, which will only run
-	// when this action is called directly.
-	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }

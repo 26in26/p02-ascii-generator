@@ -8,7 +8,7 @@ import (
 	"github.com/26in26/p02-ascii-generator/utils"
 )
 
-type charSelector func(index int, gray byte, gradient utils.Vector) byte
+type charSelector func(index int, gray byte, gradients utils.Gradient) byte
 
 type colorRenderer func(builder *strings.Builder, r, g, b byte, data []byte, rgbIndex int) (byte, byte, byte)
 
@@ -51,14 +51,15 @@ func NewAsciiStage(opts ...optFunc) *AsciiStage {
 	return s
 }
 
-func (s *AsciiStage) selectEdgeChar(index int, gray byte, gradient utils.Vector) byte {
+func (s *AsciiStage) selectEdgeChar(index int, gray byte, gradients utils.Gradient) byte {
+	gradient := gradients[index]
 	if gradient.X*gradient.X+gradient.Y*gradient.Y > s.squareEdgeThreshold {
 		return getAngleChar(gradient.X, gradient.Y)
 	}
 	return pixelToASCII(gray, s.invert)
 }
 
-func (s *AsciiStage) selectDensityChar(index int, gray byte, gradient utils.Vector) byte {
+func (s *AsciiStage) selectDensityChar(index int, gray byte, gradients utils.Gradient) byte {
 	return pixelToASCII(gray, s.invert)
 }
 
@@ -83,7 +84,7 @@ func (s *AsciiStage) Process(ctx *pipeline.FrameContext) error {
 
 	for y := 0; y < grayImg.Height; y++ {
 		for x := 0; x < grayImg.Width; x++ {
-			char := s.selector(index, grayData[index], gradient[index])
+			char := s.selector(index, grayData[index], gradient)
 
 			r, g, b = s.renderer(&asciiArt, r, g, b, workingData, index*bpp)
 
