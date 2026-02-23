@@ -7,17 +7,16 @@ import (
 	internalImage "github.com/26in26/p02-ascii-generator/image"
 )
 
-// Todo: support formats, currently only RGB & RGBA
-func ConvertToBuffer(img image.Image, f internalImage.Format) (*internalImage.Buffer, error) {
+func ConvertToRGBBuffer(img image.Image) (*internalImage.RGBBuffer, error) {
 	bounds := img.Bounds()
 	w, h := bounds.Dx(), bounds.Dy()
-	buf, err := internalImage.NewBuffer(w, h, f)
+	buf, err := internalImage.NewRGBBuffer(w, h)
 
 	if err != nil {
 		return nil, err
 	}
 
-	bpp := buf.Channels
+	bpp := 3
 
 	for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
 		for x := bounds.Min.X; x < bounds.Max.X; x++ {

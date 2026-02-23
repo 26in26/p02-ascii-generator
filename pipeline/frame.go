@@ -6,14 +6,14 @@ import (
 )
 
 type FrameContext struct {
-	SourceImage  *image.Buffer
-	WorkingImage *image.Buffer
-	GrayImage    *image.Buffer
+	SourceImage  *image.RGBBuffer
+	WorkingImage *image.RGBBuffer
+	GrayImage    *image.GrayBuffer
 	GradientMap  utils.Gradient
-	ASCIIOutput  string
+	AsciiArt     *image.AsciiBuffer
 }
 
-func NewFrameContext(src *image.Buffer) *FrameContext {
+func NewFrameContext(src *image.RGBBuffer) *FrameContext {
 	return &FrameContext{
 		SourceImage: src,
 	}

@@ -1,10 +1,5 @@
 package ascii
 
-import (
-	"strconv"
-	"strings"
-)
-
 const DENSITY = " .-=+*x#$&X@"
 const RESET = "\x1b[0m"
 
@@ -52,22 +47,23 @@ const (
 )
 
 // renderFullColor writes a 24-bit ANSI color escape code if the color has changed.
-func renderFullColor(builder *strings.Builder, r, g, b byte, data []byte, rgbIndex int) (byte, byte, byte) {
-	curR, curG, curB := data[rgbIndex], data[rgbIndex+1], data[rgbIndex+2]
-	if r != curR || g != curG || b != curB {
-		r, g, b = curR, curG, curB
-		builder.WriteString("\x1b[38;2;")
-		builder.WriteString(strconv.Itoa(int(r)))
-		builder.WriteByte(';')
-		builder.WriteString(strconv.Itoa(int(g)))
-		builder.WriteByte(';')
-		builder.WriteString(strconv.Itoa(int(b)))
-		builder.WriteByte('m')
-	}
+// curR, curG, curB := data[rgbIndex], data[rgbIndex+1], data[rgbIndex+2]
+// if r != curR || g != curG || b != curB {
+// 	r, g, b = curR, curG, curB
+// 	builder.WriteString("\x1b[38;2;")
+// 	builder.WriteString(strconv.Itoa(int(r)))
+// 	builder.WriteByte(';')
+// 	builder.WriteString(strconv.Itoa(int(g)))
+// 	builder.WriteByte(';')
+// 	builder.WriteString(strconv.Itoa(int(b)))
+// 	builder.WriteByte('m')
+// }
+
+func renderFullColor(r, g, b byte) (byte, byte, byte) {
 	return r, g, b
 }
 
 // renderMonochrome does nothing, effectively producing monochrome output.
-func renderMonochrome(builder *strings.Builder, r, g, b byte, data []byte, rgbIndex int) (byte, byte, byte) {
+func renderMonochrome(r, g, b byte) (byte, byte, byte) {
 	return r, g, b
 }

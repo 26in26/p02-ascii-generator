@@ -1,13 +1,13 @@
 package image
 
-func (b *Buffer) ToGray() (*Buffer, error) {
-	dst, err := NewBuffer(b.Width, b.Height, FormatGray)
+func (b *RGBBuffer) ToGray() (*GrayBuffer, error) {
+	dst, err := NewGrayBuffer(b.Width, b.Height)
 
 	if err != nil {
 		return nil, err
 	}
 
-	bpp := b.Channels
+	bpp := 3
 	srcData := b.Data
 	dstData := dst.Data
 

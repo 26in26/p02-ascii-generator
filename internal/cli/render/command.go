@@ -3,7 +3,6 @@ package render
 import (
 	"fmt"
 
-	"github.com/26in26/p02-ascii-generator/image"
 	"github.com/26in26/p02-ascii-generator/imageio"
 	"github.com/26in26/p02-ascii-generator/pipeline"
 	"github.com/26in26/p02-ascii-generator/stages/ascii"
@@ -77,7 +76,7 @@ func NewCommand() *cobra.Command {
 				return fmt.Errorf("couldn't load %s, %w", imgPath, err)
 			}
 
-			src, err := imageio.ConvertToBuffer(img, image.FormatRGB)
+			src, err := imageio.ConvertToRGBBuffer(img)
 			if err != nil {
 				return fmt.Errorf("internal error: \n%w", err)
 			}

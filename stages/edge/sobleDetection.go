@@ -3,7 +3,6 @@ package edge
 import (
 	"fmt"
 
-	"github.com/26in26/p02-ascii-generator/image"
 	"github.com/26in26/p02-ascii-generator/pipeline"
 	"github.com/26in26/p02-ascii-generator/utils"
 )
@@ -20,16 +19,6 @@ func (s *sobelEdgeDetectionStage) Process(ctx *pipeline.FrameContext) error {
 	src := ctx.GrayImage
 	if src == nil {
 		return fmt.Errorf("edge detection stage: %w", utils.ErrBufferNotInitialized)
-	}
-
-	// For performance, we first convert the image to grayscale.
-	if src.Format != image.FormatGray {
-		var err error
-		src, err = src.ToGray()
-		if err != nil {
-			return fmt.Errorf("edge detection stage: %w", err)
-		}
-
 	}
 
 	srcData := src.Data

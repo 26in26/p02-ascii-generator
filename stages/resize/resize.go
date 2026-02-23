@@ -38,13 +38,13 @@ func (s *ResizeStage) Process(ctx *pipeline.FrameContext) error {
 		return fmt.Errorf("resize stage: %w", utils.ErrBufferNotInitialized)
 	}
 
-	dst, err := image.NewBuffer(s.TargetWidth, s.TargetHeight, src.Format)
+	dst, err := image.NewRGBBuffer(s.TargetWidth, s.TargetHeight)
 
 	if err != nil {
 		return fmt.Errorf("resize stage: %w", err)
 	}
 
-	bpp := src.Channels
+	bpp := 3
 
 	xRatio := float64(src.Width) / float64(dst.Width)
 	yRatio := float64(src.Height) / float64(dst.Height)
@@ -58,8 +58,8 @@ func (s *ResizeStage) Process(ctx *pipeline.FrameContext) error {
 		srcXOffsets[x] = srcX * bpp
 	}
 
-	srcStride := src.Stride()
-	dstStride := dst.Stride()
+	srcStride := src.Stride
+	dstStride := dst.Stride
 	srcData := src.Data
 	dstData := dst.Data
 

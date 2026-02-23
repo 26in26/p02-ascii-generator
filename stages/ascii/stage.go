@@ -2,15 +2,15 @@ package ascii
 
 import (
 	"fmt"
-	"strings"
 
+	"github.com/26in26/p02-ascii-generator/image"
 	"github.com/26in26/p02-ascii-generator/pipeline"
 	"github.com/26in26/p02-ascii-generator/utils"
 )
 
 type charSelector func(index int, gray byte, gradients utils.Gradient) byte
 
-type colorRenderer func(builder *strings.Builder, r, g, b byte, data []byte, rgbIndex int) (byte, byte, byte)
+type colorRenderer func(location *byte, r, g, b byte)
 
 type AsciiStage struct {
 	invert              bool
@@ -72,9 +72,11 @@ func (s *AsciiStage) Process(ctx *pipeline.FrameContext) error {
 	grayImg := ctx.GrayImage
 	gradient := ctx.GradientMap
 
-	bpp := workingImg.Channels
-	var asciiArt strings.Builder
-	asciiArt.Grow((workingImg.Width + 1) * workingImg.Height)
+	bpp := 3
+	asciiArt, err := image.NewAsciiBuffer(workingImg.Width, workingImg.Height)
+	if err != nil {
+		return fmt.Errorf("ascii stage: %w", err)
+	}
 
 	grayData := grayImg.Data
 	workingData := workingImg.Data
@@ -88,16 +90,13 @@ func (s *AsciiStage) Process(ctx *pipeline.FrameContext) error {
 
 			r, g, b = s.renderer(&asciiArt, r, g, b, workingData, index*bpp)
 
-			asciiArt.WriteByte(char)
 			index++
 		}
 
 		asciiArt.WriteByte('\n')
 	}
-	asciiArt.WriteString(RESET)
 
-	ctx.ASCIIOutput = asciiArt.String()
-	println(ctx.ASCIIOutput)
+	ctx.AsciiArt = asciiArt
 
 	return nil
 }

@@ -15,7 +15,7 @@ func New(process ...Stage) *Pipeline {
 	return &Pipeline{Stages: process}
 }
 
-func (p *Pipeline) Run(img *image.Buffer) error {
+func (p *Pipeline) Run(img *image.RGBBuffer) error {
 	ctx := NewFrameContext(img)
 	for _, stage := range p.Stages {
 		err := stage.Process(ctx)
