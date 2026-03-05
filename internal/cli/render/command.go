@@ -1,6 +1,7 @@
 package render
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/26in26/p02-ascii-generator/imageio"
@@ -106,12 +107,17 @@ func NewCommand() *cobra.Command {
 			stages = append(stages, asciiStage)
 
 			// Create pipeline
-			p := pipeline.New(
+			p, err := pipeline.NewPipeline(
 				stages...,
 			)
 
-			p.Run(src)
-
+			p.Enqueue(context.Background(), src)
+			result := <-p.Results()
+			asciiArt, err := result.AsciiArt.Get(context.Background())
+			if err != nil {
+				return fmt.Errorf("internal error: %w", err)
+			}
+			print(asciiArt)
 			return nil
 		},
 	}

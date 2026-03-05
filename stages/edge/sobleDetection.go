@@ -1,31 +1,24 @@
 package edge
 
 import (
-	"fmt"
+	"context"
 
+	"github.com/26in26/p02-ascii-generator/image"
 	"github.com/26in26/p02-ascii-generator/pipeline"
 	"github.com/26in26/p02-ascii-generator/utils"
 )
 
-type sobelEdgeDetectionStage struct {
-	Gradient utils.Gradient
+func NewSobelEdgeDetectionStage() pipeline.Stage {
+	return pipeline.NewBaseStage("sobelEdgeDetection", []pipeline.DataType{pipeline.DataGray}, pipeline.DataGradient, NewEdgeConnector(), SobelEdgeDetection)
 }
 
-func NewSobelEdgeDetectionStage() *sobelEdgeDetectionStage {
-	return &sobelEdgeDetectionStage{}
-}
+func SobelEdgeDetection(ctx context.Context, input *image.GrayBuffer) (utils.Gradient, error) {
 
-func (s *sobelEdgeDetectionStage) Process(ctx *pipeline.FrameContext) error {
-	src := ctx.GrayImage
-	if src == nil {
-		return fmt.Errorf("edge detection stage: %w", utils.ErrBufferNotInitialized)
-	}
+	srcData := input.Data
+	width := input.Width
+	height := input.Height
 
-	srcData := src.Data
-	width := src.Width
-	height := src.Height
-	s.Gradient = make(utils.Gradient, len(srcData))
-	gradData := s.Gradient
+	gradData := make(utils.Gradient, len(srcData))
 
 	i := width + 1
 
@@ -56,7 +49,5 @@ func (s *sobelEdgeDetectionStage) Process(ctx *pipeline.FrameContext) error {
 		i += 2
 	}
 
-	ctx.GradientMap = s.Gradient
-
-	return nil
+	return gradData, nil
 }

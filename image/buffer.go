@@ -61,13 +61,13 @@ func NewAsciiBuffer(width, height int) (*AsciiBuffer, error) {
 		return nil, utils.ErrInvalidDimensions
 	}
 
-	stride := width * 3
+	stride := width * 4
 
 	return &AsciiBuffer{
 		buffer: buffer{
 			Width:  width,
 			Height: height,
-			Stride: width * 3,
+			Stride: stride,
 			Data:   make([]byte, stride*height),
 		},
 	}, nil

@@ -1,102 +1,73 @@
 package ascii
 
 import (
-	"fmt"
+	"context"
 
 	"github.com/26in26/p02-ascii-generator/image"
 	"github.com/26in26/p02-ascii-generator/pipeline"
 	"github.com/26in26/p02-ascii-generator/utils"
 )
 
-type charSelector func(index int, gray byte, gradients utils.Gradient) byte
-
-type colorRenderer func(location *byte, r, g, b byte)
-
 type AsciiStage struct {
 	invert              bool
 	squareEdgeThreshold int
-
-	selector charSelector
-	renderer colorRenderer
 }
 
-func NewAsciiStage(opts ...optFunc) *AsciiStage {
+type AsciiInput struct {
+	workingImg *image.RGBBuffer
+	grayImg    *image.GrayBuffer
+	gradient   utils.Gradient
+}
+
+func NewAsciiStage(opts ...optFunc) pipeline.Stage {
 	o := defaultOpts()
 
 	for _, opt := range opts {
 		opt(&o)
 	}
 
-	s := &AsciiStage{
-		invert:              o.invert,
-		squareEdgeThreshold: o.edgeThreshold * o.edgeThreshold,
-	}
+	// s := &AsciiStage{
+	// 	invert:              o.invert,
+	// 	squareEdgeThreshold: o.edgeThreshold * o.edgeThreshold,
+	// }
 
-	if o.useEdge {
-		s.selector = s.selectEdgeChar
-	} else {
-		s.selector = s.selectDensityChar
-	}
-
-	// Set up the color renderer based on options.
-	switch o.colorMode {
-	case FullColor:
-		s.renderer = renderFullColor
-	case Monochrome:
-		s.renderer = renderMonochrome
-	default:
-		s.renderer = renderMonochrome
-	}
-
-	return s
+	return pipeline.NewBaseStage(
+		"ascii", []pipeline.DataType{pipeline.DataResized, pipeline.DataAscii, pipeline.DataGray}, pipeline.DataAscii, NewAsciiConnector(), Ascii,
+	)
 }
 
-func (s *AsciiStage) selectEdgeChar(index int, gray byte, gradients utils.Gradient) byte {
-	gradient := gradients[index]
-	if gradient.X*gradient.X+gradient.Y*gradient.Y > s.squareEdgeThreshold {
-		return getAngleChar(gradient.X, gradient.Y)
-	}
-	return pixelToASCII(gray, s.invert)
-}
-
-func (s *AsciiStage) selectDensityChar(index int, gray byte, gradients utils.Gradient) byte {
-	return pixelToASCII(gray, s.invert)
-}
-
-func (s *AsciiStage) Process(ctx *pipeline.FrameContext) error {
-	workingImg := ctx.WorkingImage
-	if workingImg == nil {
-		return fmt.Errorf("ascii stage: %w", utils.ErrBufferNotInitialized)
-	}
-
-	grayImg := ctx.GrayImage
-	gradient := ctx.GradientMap
+func Ascii(ctx context.Context, input *AsciiInput) (*image.AsciiBuffer, error) {
+	workingData := input.workingImg.Data
+	grayData := input.grayImg.Data
+	gradient := input.gradient
 
 	bpp := 3
-	asciiArt, err := image.NewAsciiBuffer(workingImg.Width, workingImg.Height)
+	asciiArt, err := image.NewAsciiBuffer(input.workingImg.Width, input.workingImg.Height)
 	if err != nil {
-		return fmt.Errorf("ascii stage: %w", err)
+		return nil, err
 	}
-
-	grayData := grayImg.Data
-	workingData := workingImg.Data
 
 	var r, g, b byte = 0, 0, 0
 	index := 0
 
-	for y := 0; y < grayImg.Height; y++ {
-		for x := 0; x < grayImg.Width; x++ {
-			char := s.selector(index, grayData[index], gradient)
+	for y := 0; y < asciiArt.Height; y++ {
+		for x := 0; x < asciiArt.Width; x++ {
+			var char byte
+			if gradient[index].X*gradient[index].X+gradient[index].Y*gradient[index].Y > 400 {
+				char = getAngleChar(gradient[index].X, gradient[index].Y)
+			} else {
+				char = pixelToASCII(grayData[index], false)
+			}
 
-			r, g, b = s.renderer(&asciiArt, r, g, b, workingData, index*bpp)
+			r, g, b = workingData[index*bpp], workingData[index*bpp+1], workingData[index*bpp+2]
+			asciiArt.Data[index*4] = char
+			asciiArt.Data[index*4+1] = r
+			asciiArt.Data[index*4+2] = g
+			asciiArt.Data[index*4+3] = b
 
 			index++
 		}
-
-		asciiArt.WriteByte('\n')
 	}
 
-	ctx.AsciiArt = asciiArt
-
-	return nil
+	return asciiArt, nil
 }

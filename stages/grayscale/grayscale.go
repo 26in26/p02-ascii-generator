@@ -1,25 +1,19 @@
 package grayscale
 
 import (
-	"fmt"
+	"context"
 
+	"github.com/26in26/p02-ascii-generator/image"
 	"github.com/26in26/p02-ascii-generator/pipeline"
-	"github.com/26in26/p02-ascii-generator/utils"
 )
 
-type grayscaleStage struct{}
-
-func (s *grayscaleStage) Process(ctx *pipeline.FrameContext) error {
-	if ctx.WorkingImage == nil {
-		return fmt.Errorf("grayscale stage: %w", utils.ErrBufferNotInitialized)
-	}
-
-	var err error
-	ctx.GrayImage, err = ctx.WorkingImage.ToGray()
-
-	return err
+func Grayscale(ctx context.Context, input *image.RGBBuffer) (*image.GrayBuffer, error) {
+	return input.ToGray()
 }
 
-func NewGrayscaleStage() *grayscaleStage {
-	return &grayscaleStage{}
+func NewGrayscaleStage() pipeline.Stage {
+	return pipeline.NewBaseStage("grayscale", []pipeline.DataType{pipeline.DataResized}, pipeline.DataGray,
+		NewGrayScaleConnector(),
+		Grayscale,
+	)
 }

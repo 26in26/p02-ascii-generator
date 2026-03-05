@@ -1,6 +1,7 @@
 package resize
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/26in26/p02-ascii-generator/image"
@@ -10,12 +11,13 @@ import (
 
 const CHAR_ASPECT_RATIO = 2
 
-type ResizeStage struct {
+type ResizeInput struct {
+	Input        *image.RGBBuffer
 	TargetWidth  int
 	TargetHeight int
 }
 
-func NewResizeStage(opts ...optFunc) (*ResizeStage, error) {
+func NewResizeStage(opts ...optFunc) (pipeline.Stage, error) {
 	o := defaultOpts()
 
 	for _, opt := range opts {
@@ -26,22 +28,23 @@ func NewResizeStage(opts ...optFunc) (*ResizeStage, error) {
 		return nil, fmt.Errorf("resize stage: %w", utils.ErrInvalidDimensions)
 	}
 
-	return &ResizeStage{
-		TargetWidth:  o.width,
-		TargetHeight: o.height,
-	}, nil
+	r := pipeline.NewBaseStage("resize", []pipeline.DataType{pipeline.DataRaw}, pipeline.DataResized,
+		NewResizeConnector(o.width, o.height),
+		Resize,
+	)
+
+	return r, nil
 }
 
-func (s *ResizeStage) Process(ctx *pipeline.FrameContext) error {
-	src := ctx.SourceImage
-	if src == nil {
-		return fmt.Errorf("resize stage: %w", utils.ErrBufferNotInitialized)
-	}
+func Resize(ctx context.Context, input *ResizeInput) (*image.RGBBuffer, error) {
+	src := input.Input
+	w := input.TargetWidth
+	h := input.TargetHeight
 
-	dst, err := image.NewRGBBuffer(s.TargetWidth, s.TargetHeight)
+	dst, err := image.NewRGBBuffer(w, h)
 
 	if err != nil {
-		return fmt.Errorf("resize stage: %w", err)
+		return nil, err
 	}
 
 	bpp := 3
@@ -83,7 +86,5 @@ func (s *ResizeStage) Process(ctx *pipeline.FrameContext) error {
 		}
 	}
 
-	ctx.WorkingImage = dst
-
-	return nil
+	return dst, nil
 }
