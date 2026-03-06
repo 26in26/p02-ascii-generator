@@ -3,6 +3,8 @@ package render
 import (
 	"context"
 	"fmt"
+	"image/png"
+	"os"
 
 	"github.com/26in26/p02-ascii-generator/imageio"
 	"github.com/26in26/p02-ascii-generator/pipeline"
@@ -117,7 +119,13 @@ func NewCommand() *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("internal error: %w", err)
 			}
-			print(asciiArt)
+
+			asciiImg := asciiArt.ToImage()
+			f, _ := os.Create("ascii.png")
+			defer f.Close()
+
+			png.Encode(f, asciiImg)
+
 			return nil
 		},
 	}

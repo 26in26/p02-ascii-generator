@@ -1,5 +1,14 @@
 package image
 
+import (
+	"image"
+	"image/color"
+
+	"golang.org/x/image/font"
+	"golang.org/x/image/font/basicfont"
+	"golang.org/x/image/math/fixed"
+)
+
 func (b *RGBBuffer) ToGray() (*GrayBuffer, error) {
 	dst, err := NewGrayBuffer(b.Width, b.Height)
 
@@ -28,4 +37,45 @@ func (b *RGBBuffer) ToGray() (*GrayBuffer, error) {
 	}
 
 	return dst, nil
+}
+
+func (b *AsciiBuffer) ToImage() image.Image {
+
+	const cellW = 7
+	const cellH = 13
+
+	imgWidth := b.buffer.Width * cellW
+	imgHeight := b.buffer.Height * cellH
+
+	img := image.NewRGBA(image.Rect(0, 0, imgWidth, imgHeight))
+
+	drawer := &font.Drawer{
+		Dst:  img,
+		Src:  image.NewUniform(color.White),
+		Face: basicfont.Face7x13,
+	}
+
+	for y := 0; y < b.buffer.Height; y++ {
+		for x := 0; x < b.buffer.Width; x++ {
+
+			i := y*b.buffer.Stride + x*4
+
+			ch := rune(b.buffer.Data[i])
+			r := b.buffer.Data[i+1]
+			g := b.buffer.Data[i+2]
+			b := b.buffer.Data[i+3]
+
+			drawer.Src = image.NewUniform(color.RGBA{r, g, b, 255})
+
+			px := x * cellW
+			py := y * cellH
+
+			// glyphs are drawn from the basline up (not top-left corner)
+			drawer.Dot = fixed.P(px, py+13)
+
+			drawer.DrawString(string(ch))
+		}
+	}
+
+	return img
 }
