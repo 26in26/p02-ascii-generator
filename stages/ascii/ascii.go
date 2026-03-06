@@ -38,9 +38,9 @@ func getAngleChar(gx, gy int) byte {
 	}
 	// Otherwise, it's a diagonal edge
 	if (gx > 0) == (gy > 0) { // gx and gy have the same sign
-		return '\\'
+		return '/'
 	}
-	return '/' // gx and gy have different signs
+	return '\\' // gx and gy have different signs
 }
 
 type ColorMode uint8
