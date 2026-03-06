@@ -11,12 +11,6 @@ import (
 
 const CHAR_ASPECT_RATIO = 2
 
-type ResizeInput struct {
-	Input        *image.RGBBuffer
-	TargetWidth  int
-	TargetHeight int
-}
-
 func NewResizeStage(opts ...optFunc) (pipeline.Stage, error) {
 	o := defaultOpts()
 
@@ -29,17 +23,21 @@ func NewResizeStage(opts ...optFunc) (pipeline.Stage, error) {
 	}
 
 	r := pipeline.NewBaseStage("resize", []pipeline.DataType{pipeline.DataRaw}, pipeline.DataResized,
-		NewResizeConnector(o.width, o.height),
-		Resize,
+		&ResizeConnector{},
+		ResizeWrapper(o.width, o.height),
 	)
 
 	return r, nil
 }
 
-func Resize(ctx context.Context, input *ResizeInput) (*image.RGBBuffer, error) {
-	src := input.Input
-	w := input.TargetWidth
-	h := input.TargetHeight
+func ResizeWrapper(w, h int) pipeline.Kernal[*image.RGBBuffer, *image.RGBBuffer] {
+	return func(ctx context.Context, input *image.RGBBuffer) (*image.RGBBuffer, error) {
+		return Resize(ctx, input, w, h)
+	}
+}
+
+func Resize(ctx context.Context, input *image.RGBBuffer, w, h int) (*image.RGBBuffer, error) {
+	src := input
 
 	dst, err := image.NewRGBBuffer(w, h)
 

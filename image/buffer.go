@@ -52,6 +52,8 @@ func NewGrayBuffer(width, height int) (*GrayBuffer, error) {
 	}, nil
 }
 
+// AsciiBuffer represents an image made from colored text.
+// It provides 1 char and 3 color chanels (bytes) per pixel.
 type AsciiBuffer struct {
 	buffer
 }
