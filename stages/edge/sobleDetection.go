@@ -2,18 +2,25 @@ package edge
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/26in26/p02-ascii-generator/image"
 	"github.com/26in26/p02-ascii-generator/pipeline"
 	"github.com/26in26/p02-ascii-generator/utils"
 )
 
-func NewSobelEdgeDetectionStage() pipeline.Stage {
-	return pipeline.NewBaseStage("sobelEdgeDetection", []pipeline.DataType{pipeline.DataGray}, pipeline.DataGradient, NewEdgeConnector(), SobelEdgeDetection)
+type SobelEdgeDetectionStage struct {
+	pipeline.BaseStage[*image.GrayBuffer, utils.Gradient]
 }
 
-func SobelEdgeDetection(ctx context.Context, input *image.GrayBuffer) (utils.Gradient, error) {
+func NewSobelEdgeDetectionStage() pipeline.Stage[*image.GrayBuffer, utils.Gradient] {
+	return &SobelEdgeDetectionStage{
+		BaseStage: *pipeline.NewBaseStage[*image.GrayBuffer, utils.Gradient]("SobelEdgeDetection"),
+	}
+}
 
+func (s *SobelEdgeDetectionStage) Kernal(ctx context.Context, input *image.GrayBuffer) (utils.Gradient, error) {
+	fmt.Println("hey")
 	srcData := input.Data
 	width := input.Width
 	height := input.Height

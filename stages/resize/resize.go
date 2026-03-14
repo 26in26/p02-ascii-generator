@@ -11,7 +11,13 @@ import (
 
 const CHAR_ASPECT_RATIO = 2
 
-func NewResizeStage(opts ...optFunc) (pipeline.Stage, error) {
+type ResizeStage struct {
+	pipeline.BaseStage[*image.RGBBuffer, *image.RGBBuffer]
+	w int
+	h int
+}
+
+func NewResizeStage(opts ...optFunc) (pipeline.Stage[*image.RGBBuffer, *image.RGBBuffer], error) {
 	o := defaultOpts()
 
 	for _, opt := range opts {
@@ -22,24 +28,17 @@ func NewResizeStage(opts ...optFunc) (pipeline.Stage, error) {
 		return nil, fmt.Errorf("resize stage: %w", utils.ErrInvalidDimensions)
 	}
 
-	r := pipeline.NewBaseStage("resize", []pipeline.DataType{pipeline.DataRaw}, pipeline.DataResized,
-		&ResizeConnector{},
-		ResizeWrapper(o.width, o.height),
-	)
-
-	return r, nil
+	return &ResizeStage{
+		BaseStage: *pipeline.NewBaseStage[*image.RGBBuffer, *image.RGBBuffer]("Resize"),
+		w:         o.width,
+		h:         o.height,
+	}, nil
 }
 
-func ResizeWrapper(w, h int) pipeline.Kernal[*image.RGBBuffer, *image.RGBBuffer] {
-	return func(ctx context.Context, input *image.RGBBuffer) (*image.RGBBuffer, error) {
-		return Resize(ctx, input, w, h)
-	}
-}
-
-func Resize(ctx context.Context, input *image.RGBBuffer, w, h int) (*image.RGBBuffer, error) {
+func (s *ResizeStage) Kernal(ctx context.Context, input *image.RGBBuffer) (*image.RGBBuffer, error) {
 	src := input
 
-	dst, err := image.NewRGBBuffer(w, h)
+	dst, err := image.NewRGBBuffer(s.w, s.h)
 
 	if err != nil {
 		return nil, err
@@ -85,4 +84,10 @@ func Resize(ctx context.Context, input *image.RGBBuffer, w, h int) (*image.RGBBu
 	}
 
 	return dst, nil
+}
+
+func (s *ResizeStage) Release(input *image.RGBBuffer) {
+	if input == nil {
+		return
+	}
 }

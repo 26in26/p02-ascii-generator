@@ -1,43 +1,55 @@
 package ascii
 
-type opts struct {
-	useEdge       bool
-	edgeThreshold int
-	invert        bool
-	colorMode     ColorMode
+type stageOpts struct {
+	invert bool
 }
 
-type optFunc func(*opts)
+type stageOptFunc func(*stageOpts)
 
-func defaultOpts() opts {
-	return opts{
-		invert:        false,
-		edgeThreshold: 20,
-		useEdge:       true,
-		colorMode:     FullColor,
+func defaultOpts() stageOpts {
+	return stageOpts{
+		invert: false,
 	}
 }
 
-func WithEdge(useEdge bool) optFunc {
-	return func(o *opts) {
-		o.useEdge = useEdge
-	}
-}
-
-func WithEdgeThreshold(threshold int) optFunc {
-	return func(o *opts) {
-		o.edgeThreshold = threshold
-	}
-}
-
-func WithInvert(invert bool) optFunc {
-	return func(o *opts) {
+func WithInvert(invert bool) stageOptFunc {
+	return func(o *stageOpts) {
 		o.invert = invert
 	}
 }
 
-func WithColorMode(mode ColorMode) optFunc {
-	return func(o *opts) {
+type edgeFilterOpts struct {
+	threshold int
+}
+
+type edgeFilterOptFunc func(*edgeFilterOpts)
+
+func defaultEdgeOpts() edgeFilterOpts {
+	return edgeFilterOpts{
+		threshold: 20,
+	}
+}
+
+func WithEdgeThreshold(threshold int) edgeFilterOptFunc {
+	return func(o *edgeFilterOpts) {
+		o.threshold = threshold
+	}
+}
+
+type colorFilterOpts struct {
+	colorMode ColorMode
+}
+
+type colorFilterOptFunc func(*colorFilterOpts)
+
+func defaultColorOpts() colorFilterOpts {
+	return colorFilterOpts{
+		colorMode: FullColor,
+	}
+}
+
+func WithColorMode(mode ColorMode) colorFilterOptFunc {
+	return func(o *colorFilterOpts) {
 		o.colorMode = mode
 	}
 }

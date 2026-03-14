@@ -7,13 +7,16 @@ import (
 	"github.com/26in26/p02-ascii-generator/pipeline"
 )
 
-func Grayscale(ctx context.Context, input *image.RGBBuffer) (*image.GrayBuffer, error) {
-	return input.ToGray()
+type GrayscaleStage struct {
+	pipeline.BaseStage[*image.RGBBuffer, *image.GrayBuffer]
 }
 
-func NewGrayscaleStage() pipeline.Stage {
-	return pipeline.NewBaseStage("grayscale", []pipeline.DataType{pipeline.DataResized}, pipeline.DataGray,
-		NewGrayScaleConnector(),
-		Grayscale,
-	)
+func NewGrayscaleStage() pipeline.Stage[*image.RGBBuffer, *image.GrayBuffer] {
+	return &GrayscaleStage{
+		BaseStage: *pipeline.NewBaseStage[*image.RGBBuffer, *image.GrayBuffer]("Grayscale"),
+	}
+}
+
+func (s *GrayscaleStage) Kernal(ctx context.Context, input *image.RGBBuffer) (*image.GrayBuffer, error) {
+	return input.ToGray()
 }
