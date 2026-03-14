@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"image/png"
 	"os"
+	"sync"
 
+	internalImage "github.com/26in26/p02-ascii-generator/image"
 	"github.com/26in26/p02-ascii-generator/imageio"
-	"github.com/26in26/p02-ascii-generator/pipeline"
+	"github.com/26in26/p02-ascii-generator/pipeline/flow"
 	"github.com/26in26/p02-ascii-generator/stages/ascii"
 	"github.com/26in26/p02-ascii-generator/stages/edge"
 	"github.com/26in26/p02-ascii-generator/stages/grayscale"
@@ -84,8 +86,7 @@ func NewCommand() *cobra.Command {
 				return fmt.Errorf("internal error: \n%w", err)
 			}
 
-			stages := make([]pipeline.Stage, 0, 5)
-
+			// stages
 			resizeStage, err := resize.NewResizeStage(resize.WithWidth(190),
 				resize.WithAspectRatio(src.Width, src.Height, true),
 			)
@@ -94,37 +95,59 @@ func NewCommand() *cobra.Command {
 			}
 
 			grayscaleStage := grayscale.NewGrayscaleStage()
-			stages = append(stages, resizeStage, grayscaleStage)
+			edgeStage := edge.NewSobelEdgeDetectionStage()
+			asciiStage := ascii.NewAsciiStage(ascii.WithInvert(false))
 
-			if edgeFlag {
-				edgeDetection := edge.NewSobelEdgeDetectionStage()
-				stages = append(stages, edgeDetection)
-			}
+			// filters
+			edgeFilter := ascii.NewEdgeFilter(ascii.WithEdgeThreshold(23))
+			colorFilter := ascii.NewColorFilter()
 
-			asciiStage := ascii.NewAsciiStage(ascii.WithEdgeThreshold(23),
-				ascii.WithColorMode(ascii.FullColor),
-				ascii.WithInvert(false),
-				ascii.WithEdge(edgeFlag),
-			)
-			stages = append(stages, asciiStage)
+			// stream
+			streamCtx := context.Background()
 
-			// Create pipeline
-			p, err := pipeline.NewPipeline(
-				stages...,
-			)
+			rawStream := flow.NewOutlet[*internalImage.RGBBuffer](10)
+			resizeStream := flow.Map(streamCtx, &rawStream, resizeStage)
+			// Branch after resizing to use one stream for color and one for grayscale.
+			resizeBranches := resizeStream.Branch(streamCtx, 2)
 
-			p.Enqueue(context.Background(), src)
-			result := <-p.Results()
-			asciiArt, err := result.AsciiArt.Get(context.Background())
-			if err != nil {
-				return fmt.Errorf("internal error: %w", err)
-			}
+			// Path for grayscale -> ascii characters
+			grayscaleStream := flow.Map(streamCtx, &resizeBranches[0], grayscaleStage)
+			grayBranches := grayscaleStream.Branch(streamCtx, 2)
+			edgeStream := flow.Map(streamCtx, &grayBranches[0], edgeStage)
+			asciiStream := flow.Map(streamCtx, &grayBranches[1], asciiStage)
 
-			asciiImg := asciiArt.ToImage()
-			f, _ := os.Create("ascii.png")
-			defer f.Close()
+			// Combine streams
+			edgeZip := flow.Zip(streamCtx, asciiStream, edgeStream)
+			asciiStream = flow.Mask(streamCtx, edgeZip, edgeFilter)
+			// Zip with the resized color stream (resizeBranches[1])
+			colorZip := flow.Zip(streamCtx, asciiStream, resizeBranches[1])
+			asciiStream = flow.Mask(streamCtx, colorZip, colorFilter)
 
-			png.Encode(f, asciiImg)
+			var wg sync.WaitGroup
+			wg.Add(1)
+
+			asciiStream.Sink(func(ab *internalImage.AsciiBuffer, err error) {
+				if err != nil {
+					fmt.Println(err)
+					return
+				}
+
+				asciiImg := ab.ToImage()
+				f, _ := os.Create("ascii.png")
+				defer f.Close()
+
+				png.Encode(f, asciiImg)
+				wg.Done()
+
+			})
+
+			RGBBufferChan := make(chan *internalImage.RGBBuffer)
+			defer close(RGBBufferChan)
+			rawStream.Feed(streamCtx, RGBBufferChan)
+
+			RGBBufferChan <- src
+
+			wg.Wait()
 
 			return nil
 		},
