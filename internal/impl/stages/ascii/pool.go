@@ -2,7 +2,7 @@ package ascii
 
 import (
 	"github.com/26in26/p02-ascii-generator/image"
-	"github.com/26in26/p02-ascii-generator/utils"
+	"github.com/26in26/p02-ascii-generator/utils/pools"
 )
 
 type size struct {
@@ -10,12 +10,12 @@ type size struct {
 }
 
 type asciiArtPool struct {
-	*utils.Pool[size, *image.AsciiBuffer]
+	*pools.KeyedPool[size, *image.AsciiBuffer]
 }
 
 func NewAsciiArtPool() *asciiArtPool {
 	return &asciiArtPool{
-		Pool: utils.NewPool(func(s size) (*image.AsciiBuffer, error) {
+		KeyedPool: pools.NewPool(func(s size) (*image.AsciiBuffer, error) {
 			return image.NewAsciiBuffer(s.w, s.h)
 		}),
 	}

@@ -18,7 +18,6 @@ func LoadImageFromFile(path string) (image.Image, error) {
 	decodedImg, _, err := image.Decode(file)
 
 	return decodedImg, err
-
 }
 
 func LoadImageFromStream(r io.Reader) (image.Image, error) {

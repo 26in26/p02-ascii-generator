@@ -8,12 +8,12 @@ import (
 	"sync"
 
 	internalImage "github.com/26in26/p02-ascii-generator/image"
-	"github.com/26in26/p02-ascii-generator/imageio"
 	"github.com/26in26/p02-ascii-generator/pipeline/flow"
 	"github.com/26in26/p02-ascii-generator/stages/ascii"
 	"github.com/26in26/p02-ascii-generator/stages/edge"
 	"github.com/26in26/p02-ascii-generator/stages/grayscale"
 	"github.com/26in26/p02-ascii-generator/stages/resize"
+	"github.com/26in26/p02-ascii-generator/utils/imageio"
 	"github.com/spf13/cobra"
 )
 

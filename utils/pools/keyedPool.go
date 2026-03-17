@@ -1,26 +1,26 @@
-package utils
+package pools
 
 import "sync"
 
 // Pool is a generic wrapper around sync.Map and sync.Pool.
 // It allows managing multiple sync.Pools keyed by a comparable type K,
 // storing values of type V.
-type Pool[K comparable, V any] struct {
+type KeyedPool[K comparable, V any] struct {
 	pools   sync.Map // map[K]*sync.Pool
 	factory func(K) (V, error)
 }
 
 // NewPool creates a new Pool.
 // factory is a function that creates a new instance of V given a key K.
-func NewPool[K comparable, V any](factory func(K) (V, error)) *Pool[K, V] {
-	return &Pool[K, V]{
+func NewPool[K comparable, V any](factory func(K) (V, error)) *KeyedPool[K, V] {
+	return &KeyedPool[K, V]{
 		factory: factory,
 	}
 }
 
 // Get retrieves an item from the pool specific to the given key.
 // If the specific pool is empty or doesn't exist, a new item is created using the factory.
-func (p *Pool[K, V]) Get(key K) (V, error) {
+func (p *KeyedPool[K, V]) Get(key K) (V, error) {
 	pool := p.getPool(key)
 	item := pool.Get()
 
@@ -32,11 +32,11 @@ func (p *Pool[K, V]) Get(key K) (V, error) {
 }
 
 // Put returns an item to the pool specific to the given key.
-func (p *Pool[K, V]) Put(key K, item V) {
+func (p *KeyedPool[K, V]) Put(key K, item V) {
 	p.getPool(key).Put(item)
 }
 
-func (p *Pool[K, V]) getPool(key K) *sync.Pool {
+func (p *KeyedPool[K, V]) getPool(key K) *sync.Pool {
 	if v, ok := p.pools.Load(key); ok {
 		return v.(*sync.Pool)
 	}
