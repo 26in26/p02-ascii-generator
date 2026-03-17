@@ -9,12 +9,8 @@ import (
 	"golang.org/x/image/math/fixed"
 )
 
-func (b *RGBBuffer) ToGray() (*GrayBuffer, error) {
-	dst, err := NewGrayBuffer(b.Width, b.Height)
-
-	if err != nil {
-		return nil, err
-	}
+func (b *RGBBuffer) ToGray(grayBuffer *GrayBuffer) (*GrayBuffer, error) {
+	dst := grayBuffer
 
 	bpp := 3
 	srcData := b.Data

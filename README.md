@@ -45,3 +45,5 @@ make run
 - Configurable algorithm pipeline
 - Character mapping strategies
 - Output formatting options
+
+## Postmortem

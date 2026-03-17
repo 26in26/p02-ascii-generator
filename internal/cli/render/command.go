@@ -18,16 +18,17 @@ import (
 )
 
 var (
-	output       string
-	outputFormat string
-	resizeFlag   string
-	width        int
-	height       int
-	aspectRatio  string
-	edgeFlag     bool
-	color        string
-	charset      string
-	invert       bool
+	output        string
+	outputFormat  string
+	resizeFlag    string
+	width         int
+	height        int
+	aspectRatio   string
+	edgeFlag      bool
+	edgeThreshold int
+	color         string
+	charset       string
+	invert        bool
 )
 
 // cmd represents the render command
@@ -72,18 +73,14 @@ func NewCommand() *cobra.Command {
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			imgPath := "./input.png"
+
 			if len(args) >= 1 {
 				imgPath = args[0]
 			}
 
-			img, err := imageio.LoadImageFromFile(imgPath)
+			src, err := loadImage(imgPath)
 			if err != nil {
-				return fmt.Errorf("couldn't load %s, %w", imgPath, err)
-			}
-
-			src, err := imageio.ConvertToRGBBuffer(img)
-			if err != nil {
-				return fmt.Errorf("internal error: \n%w", err)
+				return err
 			}
 
 			// stages
@@ -96,10 +93,10 @@ func NewCommand() *cobra.Command {
 
 			grayscaleStage := grayscale.NewGrayscaleStage()
 			edgeStage := edge.NewSobelEdgeDetectionStage()
-			asciiStage := ascii.NewAsciiStage(ascii.WithInvert(false))
+			asciiStage := ascii.NewAsciiStage(ascii.WithInvert(invert))
 
 			// filters
-			edgeFilter := ascii.NewEdgeFilter(ascii.WithEdgeThreshold(23))
+			edgeFilter := ascii.NewEdgeFilter(ascii.WithEdgeThreshold(edgeThreshold))
 			colorFilter := ascii.NewColorFilter()
 
 			// stream
@@ -107,7 +104,6 @@ func NewCommand() *cobra.Command {
 
 			rawStream := flow.NewOutlet[*internalImage.RGBBuffer](10)
 			resizeStream := flow.Map(streamCtx, &rawStream, resizeStage)
-			// Branch after resizing to use one stream for color and one for grayscale.
 			resizeBranches := resizeStream.Branch(streamCtx, 2)
 
 			// Path for grayscale -> ascii characters
@@ -119,7 +115,6 @@ func NewCommand() *cobra.Command {
 			// Combine streams
 			edgeZip := flow.Zip(streamCtx, asciiStream, edgeStream)
 			asciiStream = flow.Mask(streamCtx, edgeZip, edgeFilter)
-			// Zip with the resized color stream (resizeBranches[1])
 			colorZip := flow.Zip(streamCtx, asciiStream, resizeBranches[1])
 			asciiStream = flow.Mask(streamCtx, colorZip, colorFilter)
 
@@ -132,11 +127,11 @@ func NewCommand() *cobra.Command {
 					return
 				}
 
-				asciiImg := ab.ToImage()
-				f, _ := os.Create("ascii.png")
-				defer f.Close()
+				err = writeToFile(ab)
+				if err != nil {
+					fmt.Println("Couldn't write ascii art to file")
+				}
 
-				png.Encode(f, asciiImg)
 				wg.Done()
 
 			})
@@ -164,10 +159,37 @@ func NewCommand() *cobra.Command {
 	cmd.Flags().BoolVar(&edgeFlag, "edge", true, "Enable edge detection")
 	cmd.Flags().BoolVar(&edgeFlag, "no-edge", true, "Disable edge detection")
 	cmd.Flags().Lookup("no-edge").NoOptDefVal = "false"
+	cmd.Flags().IntVarP(&edgeThreshold, "threshold", "t", 23, "Edge detection threshold")
 
 	cmd.Flags().StringVar(&color, "color", "none", "Select color mode")
 	cmd.Flags().StringVar(&charset, "charset", "standard", "")
 	cmd.Flags().BoolVar(&invert, "invert", false, "Invert brightness to character mapping")
 
 	return cmd
+}
+
+func loadImage(imgPath string) (*internalImage.RGBBuffer, error) {
+	img, err := imageio.LoadImageFromFile(imgPath)
+	if err != nil {
+		return nil, fmt.Errorf("Couldn't load %s, %w", imgPath, err)
+	}
+
+	src, err := imageio.ConvertToRGBBuffer(img)
+	if err != nil {
+		return nil, fmt.Errorf("Internal error: \n%w", err)
+	}
+	return src, nil
+}
+
+func writeToFile(ascii *internalImage.AsciiBuffer) error {
+	asciiImg := ascii.ToImage()
+	f, err := os.Create("ascii.png")
+
+	if err != nil {
+		return err
+	}
+
+	defer f.Close()
+
+	return png.Encode(f, asciiImg)
 }

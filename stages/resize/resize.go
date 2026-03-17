@@ -11,10 +11,12 @@ import (
 
 const CHAR_ASPECT_RATIO = 2
 
-type ResizeStage struct {
+type resizeStage struct {
 	pipeline.BaseStage[*image.RGBBuffer, *image.RGBBuffer]
-	w int
-	h int
+	imagePool *RGBImagePool
+	xOffsets  *xOffsetsPool
+	w         int
+	h         int
 }
 
 func NewResizeStage(opts ...optFunc) (pipeline.Stage[*image.RGBBuffer, *image.RGBBuffer], error) {
@@ -28,17 +30,19 @@ func NewResizeStage(opts ...optFunc) (pipeline.Stage[*image.RGBBuffer, *image.RG
 		return nil, fmt.Errorf("resize stage: %w", utils.ErrInvalidDimensions)
 	}
 
-	return &ResizeStage{
+	return &resizeStage{
 		BaseStage: *pipeline.NewBaseStage[*image.RGBBuffer, *image.RGBBuffer]("Resize"),
+		imagePool: NewRGBImagePool(o.width, o.height),
+		xOffsets:  newXOffsetsPool(o.width),
 		w:         o.width,
 		h:         o.height,
 	}, nil
 }
 
-func (s *ResizeStage) Kernal(ctx context.Context, input *image.RGBBuffer) (*image.RGBBuffer, error) {
+func (s *resizeStage) Kernal(ctx context.Context, input *image.RGBBuffer) (*image.RGBBuffer, error) {
 	src := input
 
-	dst, err := image.NewRGBBuffer(s.w, s.h)
+	dst, err := s.imagePool.Get()
 
 	if err != nil {
 		return nil, err
@@ -49,7 +53,9 @@ func (s *ResizeStage) Kernal(ctx context.Context, input *image.RGBBuffer) (*imag
 	xRatio := float64(src.Width) / float64(dst.Width)
 	yRatio := float64(src.Height) / float64(dst.Height)
 
-	srcXOffsets := make([]int, dst.Width)
+	srcXOffsets := s.xOffsets.Get()
+	defer s.xOffsets.Put(srcXOffsets)
+
 	for x := 0; x < dst.Width; x++ {
 		srcX := int(float64(x) * xRatio)
 		if srcX >= src.Width {
@@ -86,7 +92,7 @@ func (s *ResizeStage) Kernal(ctx context.Context, input *image.RGBBuffer) (*imag
 	return dst, nil
 }
 
-func (s *ResizeStage) Release(input *image.RGBBuffer) {
+func (s *resizeStage) Release(input *image.RGBBuffer) {
 	if input == nil {
 		return
 	}

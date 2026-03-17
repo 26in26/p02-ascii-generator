@@ -11,7 +11,8 @@ import (
 
 type AsciiStage struct {
 	*pipeline.BaseStage[*image.GrayBuffer, *image.AsciiBuffer]
-	invert bool
+	asciiArtPool *asciiArtPool
+	invert       bool
 }
 
 func NewAsciiStage(opts ...stageOptFunc) pipeline.Stage[*image.GrayBuffer, *image.AsciiBuffer] {
@@ -22,13 +23,14 @@ func NewAsciiStage(opts ...stageOptFunc) pipeline.Stage[*image.GrayBuffer, *imag
 	}
 
 	return &AsciiStage{
-		BaseStage: pipeline.NewBaseStage[*image.GrayBuffer, *image.AsciiBuffer]("Ascii"),
-		invert:    o.invert,
+		BaseStage:    pipeline.NewBaseStage[*image.GrayBuffer, *image.AsciiBuffer]("Ascii"),
+		asciiArtPool: NewAsciiArtPool(),
+		invert:       o.invert,
 	}
 }
 
 func (s *AsciiStage) Kernal(ctx context.Context, input *image.GrayBuffer) (*image.AsciiBuffer, error) {
-	asciiArt, err := image.NewAsciiBuffer(input.Width, input.Height)
+	asciiArt, err := s.asciiArtPool.Get(size{input.Width, input.Height})
 	if err != nil {
 		return nil, err
 	}
@@ -46,6 +48,14 @@ func (s *AsciiStage) Kernal(ctx context.Context, input *image.GrayBuffer) (*imag
 	}
 
 	return asciiArt, nil
+}
+
+func (s *AsciiStage) Release(asciiArt *image.AsciiBuffer) {
+	if asciiArt == nil {
+		return
+	}
+
+	s.asciiArtPool.Put(size{asciiArt.Width, asciiArt.Height}, asciiArt)
 }
 
 type EdgeFilter struct {

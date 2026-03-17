@@ -2,7 +2,6 @@ package edge
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/26in26/p02-ascii-generator/image"
 	"github.com/26in26/p02-ascii-generator/pipeline"
@@ -11,21 +10,25 @@ import (
 
 type SobelEdgeDetectionStage struct {
 	pipeline.BaseStage[*image.GrayBuffer, utils.Gradient]
+	gradPool *gradientPool
 }
 
 func NewSobelEdgeDetectionStage() pipeline.Stage[*image.GrayBuffer, utils.Gradient] {
 	return &SobelEdgeDetectionStage{
 		BaseStage: *pipeline.NewBaseStage[*image.GrayBuffer, utils.Gradient]("SobelEdgeDetection"),
+		gradPool:  NewGrayImagePool(),
 	}
 }
 
 func (s *SobelEdgeDetectionStage) Kernal(ctx context.Context, input *image.GrayBuffer) (utils.Gradient, error) {
-	fmt.Println("hey")
 	srcData := input.Data
 	width := input.Width
 	height := input.Height
 
-	gradData := make(utils.Gradient, len(srcData))
+	gradData, err := s.gradPool.Get(len(srcData))
+	if err != nil {
+		return nil, err
+	}
 
 	i := width + 1
 
@@ -42,8 +45,7 @@ func (s *SobelEdgeDetectionStage) Kernal(ctx context.Context, input *image.GrayB
 			p7 := srcData[i+width]   // bottom
 			p8 := srcData[i+width+1] // bottom-right
 
-			// Apply Sobel kernels directly. Using bit-shifts (<< 1) for
-			// multiplication by 2 is a common performance pattern.
+			// Apply Sobel kernels directly. Using bit-shifts (<< 1) for preformance
 			// scaling down the vectors by 16 ( >> 4)
 			gx := ((int(p2) + (int(p5) << 1) + int(p8)) - (int(p0) + (int(p3) << 1) + int(p6))) >> 4
 			gy := ((int(p6) + (int(p7) << 1) + int(p8)) - (int(p0) + (int(p1) << 1) + int(p2))) >> 4
@@ -57,4 +59,12 @@ func (s *SobelEdgeDetectionStage) Kernal(ctx context.Context, input *image.GrayB
 	}
 
 	return gradData, nil
+}
+
+func (s *SobelEdgeDetectionStage) Release(grad utils.Gradient) {
+	if grad == nil {
+		return
+	}
+
+	s.gradPool.Put(len(grad), grad)
 }
