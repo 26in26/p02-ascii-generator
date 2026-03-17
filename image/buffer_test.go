@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/26in26/p02-ascii-generator/image"
-	"github.com/26in26/p02-ascii-generator/utils"
+	"github.com/26in26/p02-ascii-generator/internal/errs"
 )
 
 func TestNewBufferDimensionsAndStride(t *testing.T) {
@@ -75,7 +75,7 @@ func TestInvalidDimensions(t *testing.T) {
 			_, err := image.NewRGBBuffer(tc.width, tc.height)
 			if err == nil {
 				t.Fatal("expected error, got nil")
-			} else if !errors.Is(err, utils.ErrInvalidDimensions) {
+			} else if !errors.Is(err, errs.InvalidDimensions) {
 				t.Fatalf("Expexeted ErrInvalidDimensions, got %v", err)
 			}
 		})

@@ -5,8 +5,8 @@ import (
 	"fmt"
 
 	"github.com/26in26/p02-ascii-generator/image"
+	"github.com/26in26/p02-ascii-generator/internal/errs"
 	"github.com/26in26/p02-ascii-generator/pipeline"
-	"github.com/26in26/p02-ascii-generator/utils"
 )
 
 const CHAR_ASPECT_RATIO = 2
@@ -27,7 +27,7 @@ func NewResizeStage(opts ...optFunc) (pipeline.Stage[*image.RGBBuffer, *image.RG
 	}
 
 	if o.width <= 0 || o.height <= 0 {
-		return nil, fmt.Errorf("resize stage: %w", utils.ErrInvalidDimensions)
+		return nil, fmt.Errorf("resize stage: %w", errs.InvalidDimensions)
 	}
 
 	return &resizeStage{

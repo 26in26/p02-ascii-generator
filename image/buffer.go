@@ -1,7 +1,7 @@
 package image
 
 import (
-	"github.com/26in26/p02-ascii-generator/utils"
+	"github.com/26in26/p02-ascii-generator/internal/errs"
 )
 
 type buffer struct {
@@ -19,7 +19,7 @@ type RGBBuffer struct {
 
 func NewRGBBuffer(width, height int) (*RGBBuffer, error) {
 	if width < 0 || height < 0 {
-		return nil, utils.ErrInvalidDimensions
+		return nil, errs.InvalidDimensions
 	}
 	stride := width * 3
 	return &RGBBuffer{
@@ -40,7 +40,7 @@ type GrayBuffer struct {
 
 func NewGrayBuffer(width, height int) (*GrayBuffer, error) {
 	if width < 0 || height < 0 {
-		return nil, utils.ErrInvalidDimensions
+		return nil, errs.InvalidDimensions
 	}
 	return &GrayBuffer{
 		buffer: buffer{
@@ -60,7 +60,7 @@ type AsciiBuffer struct {
 
 func NewAsciiBuffer(width, height int) (*AsciiBuffer, error) {
 	if width < 0 || height < 0 {
-		return nil, utils.ErrInvalidDimensions
+		return nil, errs.InvalidDimensions
 	}
 
 	stride := width * 4
