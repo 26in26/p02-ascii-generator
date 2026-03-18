@@ -2,7 +2,7 @@ package grayscale
 
 import (
 	"github.com/26in26/p02-ascii-generator/image"
-	"github.com/26in26/p02-ascii-generator/utils"
+	"github.com/26in26/p02-ascii-generator/utils/pools"
 )
 
 type size struct {
@@ -10,12 +10,12 @@ type size struct {
 }
 
 type grayImagePool struct {
-	*utils.Pool[size, *image.GrayBuffer]
+	*pools.KeyedPool[size, *image.GrayBuffer]
 }
 
 func NewGrayImagePool() *grayImagePool {
 	return &grayImagePool{
-		Pool: utils.NewPool(func(s size) (*image.GrayBuffer, error) {
+		KeyedPool: pools.NewKeyedPool(func(s size) (*image.GrayBuffer, error) {
 			return image.NewGrayBuffer(s.w, s.h)
 		}),
 	}

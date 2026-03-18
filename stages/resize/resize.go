@@ -1,14 +1,23 @@
 package resize
 
+import (
+	"github.com/26in26/p02-ascii-generator/image"
+	"github.com/26in26/p02-ascii-generator/internal/impl/stages/resize"
+	"github.com/26in26/p02-ascii-generator/pipeline"
+	"github.com/26in26/p02-ascii-generator/utils/builder"
+)
+
+const CHAR_ASPECT_RATIO = 2
+
 type opts struct {
 	width  int
 	height int
 }
 
-type optFunc func(*opts)
+type optFunc = builder.Option[opts]
 
-func defaultOpts() opts {
-	return opts{
+func defaultOpts() *opts {
+	return &opts{
 		width:  100,
 		height: 100,
 	}
@@ -50,4 +59,10 @@ func WithAspectRatio(w, h int, preserveWidth bool) optFunc {
 			}
 		}
 	}
+}
+
+func NewResizeStage(opts ...optFunc) (pipeline.Stage[*image.RGBBuffer, *image.RGBBuffer], error) {
+	cfg := builder.Build(defaultOpts, opts...)
+
+	return resize.NewResizeStage(cfg.width, cfg.height)
 }

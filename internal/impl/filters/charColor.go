@@ -1,4 +1,4 @@
-package ascii
+package filters
 
 import (
 	"context"
@@ -8,21 +8,23 @@ import (
 	"github.com/26in26/p02-ascii-generator/pipeline/flow"
 )
 
+type ColorMode uint8
+
+const (
+	FullColor ColorMode = iota
+	RetroColor
+	Monochrome
+)
+
 type ColorFilter struct {
 	pipeline.Filter[flow.Pair[*image.AsciiBuffer, *image.RGBBuffer], *image.AsciiBuffer]
 	colorMode ColorMode
 }
 
-func NewColorFilter(opts ...colorFilterOptFunc) pipeline.Filter[flow.Pair[*image.AsciiBuffer, *image.RGBBuffer], *image.AsciiBuffer] {
-	o := defaultColorOpts()
-
-	for _, opt := range opts {
-		opt(&o)
-	}
-
+func NewColorFilter(colorMode ColorMode) pipeline.Filter[flow.Pair[*image.AsciiBuffer, *image.RGBBuffer], *image.AsciiBuffer] {
 	return &ColorFilter{
 		Filter:    pipeline.NewBaseFilter[flow.Pair[*image.AsciiBuffer, *image.RGBBuffer], *image.AsciiBuffer]("Color"),
-		colorMode: o.colorMode,
+		colorMode: colorMode,
 	}
 }
 
@@ -47,30 +49,4 @@ func (f *ColorFilter) Apply(ctx context.Context, input flow.Pair[*image.AsciiBuf
 	}
 
 	return asciiArt, nil
-}
-
-type ColorMode uint8
-
-const (
-	FullColor ColorMode = iota
-	RetroColor
-	Monochrome
-)
-
-type colorFilterOpts struct {
-	colorMode ColorMode
-}
-
-type colorFilterOptFunc func(*colorFilterOpts)
-
-func defaultColorOpts() colorFilterOpts {
-	return colorFilterOpts{
-		colorMode: FullColor,
-	}
-}
-
-func WithColorMode(mode ColorMode) colorFilterOptFunc {
-	return func(o *colorFilterOpts) {
-		o.colorMode = mode
-	}
 }

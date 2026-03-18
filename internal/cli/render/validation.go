@@ -3,14 +3,50 @@ package render
 import (
 	"errors"
 	"fmt"
+
+	"github.com/spf13/cobra"
 )
 
-var outputFormatOptions = map[string]string{"terminal": "", "file": ""}
+func commandValidation(cmd *cobra.Command, args []string) error {
+	if _, err := validateOutputPathAndFormat(outputPath, outputFormat); err != nil {
+		return err
+	}
+	if _, err := validateCharset(charset); err != nil {
+		return err
+	}
+	if resizeFlag != "" {
+		w, h, err := validateDimentions(resizeFlag)
+		if err != nil {
+			return err
+		}
+		width = w
+		height = h
+	} else {
+		if err := validateDimention(width); err != nil {
+			return fmt.Errorf("width: %w", err)
+		}
+		if err := validateDimention(height); err != nil {
+			return fmt.Errorf("height: %w", err)
+		}
+	}
 
-func validateOutputFormat(outputFormat string) (string, error) {
+	if _, _, err := validateDimentions(aspectRatio); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+var outputFormatOptions = map[string]string{"text": "", "image": ""}
+
+func validateOutputPathAndFormat(outputPath, outputFormat string) (string, error) {
 	val, ok := outputFormatOptions[outputFormat]
 	if !ok {
 		return "", errors.New("invalid output format")
+	}
+
+	if outputPath == "" && outputFormat == "image" {
+		return "", errors.New("can't write image to terminal")
 	}
 
 	return val, nil
@@ -20,17 +56,6 @@ var charsetOptions = map[string]string{"standard": "", "dense": "", "blocks": ""
 
 func validateCharset(charset string) (string, error) {
 	val, ok := charsetOptions[charset]
-	if !ok {
-		return "", errors.New("invalid charset")
-	}
-
-	return val, nil
-}
-
-var colorOptions = map[string]string{"full": "", "Retro": "", "none": ""}
-
-func validateColor(color string) (string, error) {
-	val, ok := colorOptions[color]
 	if !ok {
 		return "", errors.New("invalid charset")
 	}

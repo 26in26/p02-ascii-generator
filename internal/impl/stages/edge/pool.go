@@ -11,7 +11,7 @@ type gradientPool struct {
 
 func NewGrayImagePool() *gradientPool {
 	return &gradientPool{
-		KeyedPool: pools.NewPool(func(s int) (utils.Gradient, error) {
+		KeyedPool: pools.NewKeyedPool(func(s int) (utils.Gradient, error) {
 			return make(utils.Gradient, s), nil
 		}),
 	}

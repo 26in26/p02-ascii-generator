@@ -13,14 +13,23 @@ import (
 var rootCmd = &cobra.Command{
 	Use:   "ascii-gen",
 	Short: "A high-performance CLI tool for converting images to ASCII art",
-	Long: `ASCII Generator is a blazing fast, highly configurable command-line tool that transforms your images into stunning ASCII art.
+	Long: `                                                                                                                                                                                                                         
+		 _______    _______    _______   _________  _________            _______    _______    _       
+		(  ___  )  (  ____ \  (  ____ \  \__   __/  \__   __/           (  ____ \  (  ____ \  ( (    /|
+		| (   ) |  | (    \/  | (    \/     ) (        ) (              | (    \/  | (    \/  |  \  ( |
+		| (___) |  | (_____   | |           | |        | |      _____   | |        | (__      |   \ | |
+		|  ___  |  (_____  )  | |           | |        | |     (_____)  | | ____   |  __)     | (\ \) |
+		| (   ) |        ) |  | |           | |        | |              | | \_  )  | (        | | \   |
+		| )   ( |  /\____) |  | (____/\  ___) (___  ___) (___           | (___) |  | (____/\  | )  \  |
+		|/     \|  \_______)  (_______/  \_______/  \_______/           (_______)  (_______/  |/    )_)
+                                                                                                                                                                                                                                                        
+
+ASCII Generator is a blazing fast, highly configurable command-line tool that transforms your images into stunning ASCII art.
 
 Built with performance in mind, it utilizes advanced image processing techniques including:
   - Sobel Edge Detection for crisp structural details
-  - 24-bit TrueColor support for vibrant output
-  - Optimized integer arithmetic for maximum speed
-
-Whether you want retro monochrome aesthetics or full-color text representations, ascii-gen delivers high-quality results instantly.`,
+  - TrueColor support for vibrant output
+  - Optimized integer arithmetic for maximum speed`,
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.

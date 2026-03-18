@@ -9,21 +9,17 @@ import (
 
 type AsciiStage struct {
 	*pipeline.BaseStage[*image.GrayBuffer, *image.AsciiBuffer]
-	asciiArtPool *asciiArtPool
-	invert       bool
+	asciiArtPool   *asciiArtPool
+	invert         bool
+	densityCharset []byte
 }
 
-func NewAsciiStage(opts ...stageOptFunc) pipeline.Stage[*image.GrayBuffer, *image.AsciiBuffer] {
-	o := defaultOpts()
-
-	for _, opt := range opts {
-		opt(&o)
-	}
-
+func NewAsciiStage(densityCharset []byte, invert bool) pipeline.Stage[*image.GrayBuffer, *image.AsciiBuffer] {
 	return &AsciiStage{
-		BaseStage:    pipeline.NewBaseStage[*image.GrayBuffer, *image.AsciiBuffer]("Ascii"),
-		asciiArtPool: NewAsciiArtPool(),
-		invert:       o.invert,
+		BaseStage:      pipeline.NewBaseStage[*image.GrayBuffer, *image.AsciiBuffer]("Ascii"),
+		asciiArtPool:   NewAsciiArtPool(),
+		invert:         invert,
+		densityCharset: densityCharset,
 	}
 }
 
@@ -38,7 +34,7 @@ func (s *AsciiStage) Kernal(ctx context.Context, input *image.GrayBuffer) (*imag
 
 	for y := 0; y < asciiArt.Height; y++ {
 		for x := 0; x < asciiArt.Width; x++ {
-			asciiArt.Data[ArtIndex] = pixelToASCII(input.Data[grayIndex], s.invert)
+			asciiArt.Data[ArtIndex] = pixelToASCII(s.densityCharset, input.Data[grayIndex], s.invert)
 
 			grayIndex++
 			ArtIndex += 4

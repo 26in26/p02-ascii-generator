@@ -87,31 +87,26 @@ func TestNewBufferDataSize(t *testing.T) {
 		name       string
 		width      int
 		height     int
-		format     image.Format
 		targetSize int
 	}{{
 		name:       "positive case",
 		width:      10,
 		height:     5,
-		format:     image.FormatRGB,
 		targetSize: 150,
 	}, {
 		name:       "zero width",
 		width:      0,
 		height:     5,
-		format:     image.FormatRGB,
 		targetSize: 0,
 	}, {
 		name:       "zero height",
 		width:      0,
 		height:     15,
-		format:     image.FormatRGB,
 		targetSize: 0,
 	}, {
 		name:       "zero width & height",
 		width:      0,
 		height:     0,
-		format:     image.FormatRGB,
 		targetSize: 0,
 	}}
 

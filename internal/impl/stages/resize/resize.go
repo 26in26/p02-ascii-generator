@@ -19,23 +19,17 @@ type resizeStage struct {
 	h         int
 }
 
-func NewResizeStage(opts ...optFunc) (pipeline.Stage[*image.RGBBuffer, *image.RGBBuffer], error) {
-	o := defaultOpts()
-
-	for _, opt := range opts {
-		opt(&o)
-	}
-
-	if o.width <= 0 || o.height <= 0 {
+func NewResizeStage(w, h int) (pipeline.Stage[*image.RGBBuffer, *image.RGBBuffer], error) {
+	if w <= 0 || h <= 0 {
 		return nil, fmt.Errorf("resize stage: %w", errs.InvalidDimensions)
 	}
 
 	return &resizeStage{
 		BaseStage: *pipeline.NewBaseStage[*image.RGBBuffer, *image.RGBBuffer]("Resize"),
-		imagePool: NewRGBImagePool(o.width, o.height),
-		xOffsets:  newXOffsetsPool(o.width),
-		w:         o.width,
-		h:         o.height,
+		imagePool: NewRGBImagePool(w, h),
+		xOffsets:  newXOffsetsPool(w),
+		w:         w,
+		h:         h,
 	}, nil
 }
 

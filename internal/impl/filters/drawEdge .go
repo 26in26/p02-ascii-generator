@@ -1,4 +1,4 @@
-package ascii
+package filters
 
 import (
 	"context"
@@ -14,12 +14,10 @@ type EdgeFilter struct {
 	squareThreshold int
 }
 
-func NewEdgeFilter(opts ...edgeFilterOptFunc) pipeline.Filter[flow.Pair[*image.AsciiBuffer, utils.Gradient], *image.AsciiBuffer] {
-	o := defaultEdgeOpts()
-
+func NewEdgeFilter(threshold int) pipeline.Filter[flow.Pair[*image.AsciiBuffer, utils.Gradient], *image.AsciiBuffer] {
 	return &EdgeFilter{
 		Filter:          pipeline.NewBaseFilter[flow.Pair[*image.AsciiBuffer, utils.Gradient], *image.AsciiBuffer]("Edge"),
-		squareThreshold: o.threshold * o.threshold,
+		squareThreshold: threshold * threshold,
 	}
 }
 
@@ -72,22 +70,4 @@ func getAngleChar(gx, gy int) byte {
 		return '/'
 	}
 	return '\\' // gx and gy have different signs
-}
-
-type edgeFilterOpts struct {
-	threshold int
-}
-
-type edgeFilterOptFunc func(*edgeFilterOpts)
-
-func defaultEdgeOpts() edgeFilterOpts {
-	return edgeFilterOpts{
-		threshold: 20,
-	}
-}
-
-func WithEdgeThreshold(threshold int) edgeFilterOptFunc {
-	return func(o *edgeFilterOpts) {
-		o.threshold = threshold
-	}
 }

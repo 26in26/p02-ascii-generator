@@ -10,9 +10,9 @@ type KeyedPool[K comparable, V any] struct {
 	factory func(K) (V, error)
 }
 
-// NewPool creates a new Pool.
+// NewKeyedPool creates a new Pool.
 // factory is a function that creates a new instance of V given a key K.
-func NewPool[K comparable, V any](factory func(K) (V, error)) *KeyedPool[K, V] {
+func NewKeyedPool[K comparable, V any](factory func(K) (V, error)) *KeyedPool[K, V] {
 	return &KeyedPool[K, V]{
 		factory: factory,
 	}

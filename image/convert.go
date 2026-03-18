@@ -3,6 +3,8 @@ package image
 import (
 	"image"
 	"image/color"
+	"strconv"
+	"strings"
 
 	"golang.org/x/image/font"
 	"golang.org/x/image/font/basicfont"
@@ -74,4 +76,61 @@ func (b *AsciiBuffer) ToImage() image.Image {
 	}
 
 	return img
+}
+
+const RESET = "\x1b[0m"
+
+func (b *AsciiBuffer) ToString(str *strings.Builder, useColor bool) {
+	if useColor {
+		b.ToStringWithColor(str)
+	} else {
+		b.ToStringWithoutColor(str)
+	}
+}
+
+func (b *AsciiBuffer) ToStringWithColor(str *strings.Builder) {
+	i := 0
+	var curR, curG, curB byte
+
+	for y := 0; y < b.buffer.Height; y++ {
+		for x := 0; x < b.buffer.Width; x++ {
+			char, r, g, b := b.Data[i], b.Data[i+1], b.Data[i+2], b.Data[i+3]
+			printColor(str, curR, curG, curB, r, g, b)
+			curR, curG, curB = r, g, b
+			str.WriteByte(char)
+			i += 4
+		}
+		str.WriteByte('\n')
+	}
+	str.WriteString(RESET)
+}
+
+func (b *AsciiBuffer) ToStringWithoutColor(str *strings.Builder) {
+	i := 0
+
+	for y := 0; y < b.buffer.Height; y++ {
+		for x := 0; x < b.buffer.Width; x++ {
+			char := b.Data[i]
+			str.WriteByte(char)
+			i += 4
+		}
+		str.WriteByte('\n')
+	}
+	str.WriteString(RESET)
+}
+
+// renderFullColor writes a 24-bit ANSI color escape code if the color has changed.
+// curR, curG, curB := data[rgbIndex], data[rgbIndex+1], data[rgbIndex+2]
+
+func printColor(builder *strings.Builder, curR, curG, curB, r, g, b byte) {
+
+	if r != curR || g != curG || b != curB {
+		builder.WriteString("\x1b[38;2;")
+		builder.WriteString(strconv.Itoa(int(r)))
+		builder.WriteByte(';')
+		builder.WriteString(strconv.Itoa(int(g)))
+		builder.WriteByte(';')
+		builder.WriteString(strconv.Itoa(int(b)))
+		builder.WriteByte('m')
+	}
 }

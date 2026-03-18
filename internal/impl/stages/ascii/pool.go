@@ -15,7 +15,7 @@ type asciiArtPool struct {
 
 func NewAsciiArtPool() *asciiArtPool {
 	return &asciiArtPool{
-		KeyedPool: pools.NewPool(func(s size) (*image.AsciiBuffer, error) {
+		KeyedPool: pools.NewKeyedPool(func(s size) (*image.AsciiBuffer, error) {
 			return image.NewAsciiBuffer(s.w, s.h)
 		}),
 	}

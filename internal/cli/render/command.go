@@ -3,22 +3,22 @@ package render
 import (
 	"context"
 	"fmt"
-	"image/png"
-	"os"
+	"strings"
 	"sync"
 
+	"github.com/26in26/p02-ascii-generator/filters/charcolor"
+	"github.com/26in26/p02-ascii-generator/filters/drawedge"
 	internalImage "github.com/26in26/p02-ascii-generator/image"
 	"github.com/26in26/p02-ascii-generator/pipeline/flow"
 	"github.com/26in26/p02-ascii-generator/stages/ascii"
 	"github.com/26in26/p02-ascii-generator/stages/edge"
 	"github.com/26in26/p02-ascii-generator/stages/grayscale"
 	"github.com/26in26/p02-ascii-generator/stages/resize"
-	"github.com/26in26/p02-ascii-generator/utils/imageio"
 	"github.com/spf13/cobra"
 )
 
 var (
-	output        string
+	outputPath    string
 	outputFormat  string
 	resizeFlag    string
 	width         int
@@ -26,7 +26,7 @@ var (
 	aspectRatio   string
 	edgeFlag      bool
 	edgeThreshold int
-	color         string
+	colotFlag     bool
 	charset       string
 	invert        bool
 )
@@ -34,162 +34,130 @@ var (
 // cmd represents the render command
 func NewCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "render",
-		Short: "Render an image/video to ASCII art",
-		Long:  "Render an image/video to ASCII art",
-		Args:  cobra.MaximumNArgs(1),
-		PreRunE: func(cmd *cobra.Command, args []string) error {
-			if _, err := validateOutputFormat(outputFormat); err != nil {
-				return err
-			}
-			if _, err := validateCharset(charset); err != nil {
-				return err
-			}
-			if _, err := validateColor(color); err != nil {
-				return err
-			}
-			if resizeFlag != "" {
-				w, h, err := validateDimentions(resizeFlag)
-				if err != nil {
-					return err
-				}
-				width = w
-				height = h
-			} else {
-				if err := validateDimention(width); err != nil {
-					return fmt.Errorf("width: %w", err)
-				}
-				if err := validateDimention(height); err != nil {
-					return fmt.Errorf("height: %w", err)
-				}
-			}
-
-			if _, _, err := validateDimentions(aspectRatio); err != nil {
-				return err
-			}
-
-			return nil
-
-		},
-		RunE: func(cmd *cobra.Command, args []string) error {
-			imgPath := "./input.png"
-
-			if len(args) >= 1 {
-				imgPath = args[0]
-			}
-
-			src, err := loadImage(imgPath)
-			if err != nil {
-				return err
-			}
-
-			// stages
-			resizeStage, err := resize.NewResizeStage(resize.WithWidth(190),
-				resize.WithAspectRatio(src.Width, src.Height, true),
-			)
-			if err != nil {
-				return fmt.Errorf("internal error, %w", err)
-			}
-
-			grayscaleStage := grayscale.NewGrayscaleStage()
-			edgeStage := edge.NewSobelEdgeDetectionStage()
-			asciiStage := ascii.NewAsciiStage(ascii.WithInvert(invert))
-
-			// filters
-			edgeFilter := ascii.NewEdgeFilter(ascii.WithEdgeThreshold(edgeThreshold))
-			colorFilter := ascii.NewColorFilter()
-
-			// stream
-			streamCtx := context.Background()
-
-			rawStream := flow.NewOutlet[*internalImage.RGBBuffer](10)
-			resizeStream := flow.Map(streamCtx, &rawStream, resizeStage)
-			resizeBranches := resizeStream.Branch(streamCtx, 2)
-
-			// Path for grayscale -> ascii characters
-			grayscaleStream := flow.Map(streamCtx, &resizeBranches[0], grayscaleStage)
-			grayBranches := grayscaleStream.Branch(streamCtx, 2)
-			edgeStream := flow.Map(streamCtx, &grayBranches[0], edgeStage)
-			asciiStream := flow.Map(streamCtx, &grayBranches[1], asciiStage)
-
-			// Combine streams
-			edgeZip := flow.Zip(streamCtx, asciiStream, edgeStream)
-			asciiStream = flow.Mask(streamCtx, edgeZip, edgeFilter)
-			colorZip := flow.Zip(streamCtx, asciiStream, resizeBranches[1])
-			asciiStream = flow.Mask(streamCtx, colorZip, colorFilter)
-
-			var wg sync.WaitGroup
-			wg.Add(1)
-
-			asciiStream.Sink(func(ab *internalImage.AsciiBuffer, err error) {
-				if err != nil {
-					fmt.Println(err)
-					return
-				}
-
-				err = writeToFile(ab)
-				if err != nil {
-					fmt.Println("Couldn't write ascii art to file")
-				}
-
-				wg.Done()
-
-			})
-
-			RGBBufferChan := make(chan *internalImage.RGBBuffer)
-			defer close(RGBBufferChan)
-			rawStream.Feed(streamCtx, RGBBufferChan)
-
-			RGBBufferChan <- src
-
-			wg.Wait()
-
-			return nil
-		},
+		Use:     "render",
+		Short:   "Render an image to ASCII art",
+		Long:    "Render an image to ASCII art with a variety of options.\nUnlocking youre ASCII dream! ",
+		Args:    cobra.ExactArgs(1),
+		PreRunE: commandValidation,
+		RunE:    run,
 	}
 
-	cmd.Flags().StringVarP(&output, "output", "o", "", "Output file path")
-	cmd.Flags().StringVar(&outputFormat, "output-format", "terminal", "Format for output")
+	cmd.Flags().StringVarP(&outputPath, "output", "o", "", "Output file path, if not specified prints to the terminal")
+	cmd.Flags().StringVar(&outputFormat, "output-format", "text", "Format for output (image, text)")
 
 	cmd.Flags().StringVar(&resizeFlag, "resize", "", "Output new dimensions, resize overide width and height")
 	cmd.Flags().IntVar(&width, "width", 100, "Output width dimension")
 	cmd.Flags().IntVar(&height, "height", 100, "Output height dimension")
 	cmd.Flags().StringVar(&aspectRatio, "aspect-ratio", "1X1", "")
 
-	cmd.Flags().BoolVar(&edgeFlag, "edge", true, "Enable edge detection")
-	cmd.Flags().BoolVar(&edgeFlag, "no-edge", true, "Disable edge detection")
+	cmd.Flags().BoolFunc("edge", "Enable edge detection", func(s string) error {
+		edgeFlag = true
+		return nil
+	})
+	cmd.Flags().Lookup("edge").NoOptDefVal = "true"
+	cmd.Flags().BoolFunc("no-edge", "Disable edge detection", func(s string) error {
+		edgeFlag = false
+		return nil
+	})
 	cmd.Flags().Lookup("no-edge").NoOptDefVal = "false"
 	cmd.Flags().IntVarP(&edgeThreshold, "threshold", "t", 23, "Edge detection threshold")
 
-	cmd.Flags().StringVar(&color, "color", "none", "Select color mode")
+	cmd.Flags().BoolVar(&colotFlag, "color", true, "Enable full color")
+	cmd.Flags().BoolVar(&colotFlag, "no-color", true, "Disable edge detection")
+	cmd.Flags().Lookup("no-color").NoOptDefVal = "false"
+
 	cmd.Flags().StringVar(&charset, "charset", "standard", "")
 	cmd.Flags().BoolVar(&invert, "invert", false, "Invert brightness to character mapping")
 
 	return cmd
 }
 
-func loadImage(imgPath string) (*internalImage.RGBBuffer, error) {
-	img, err := imageio.LoadImageFromFile(imgPath)
-	if err != nil {
-		return nil, fmt.Errorf("Couldn't load %s, %w", imgPath, err)
-	}
+func run(cmd *cobra.Command, args []string) error {
+	imgPath := args[0]
 
-	src, err := imageio.ConvertToRGBBuffer(img)
-	if err != nil {
-		return nil, fmt.Errorf("Internal error: \n%w", err)
-	}
-	return src, nil
-}
-
-func writeToFile(ascii *internalImage.AsciiBuffer) error {
-	asciiImg := ascii.ToImage()
-	f, err := os.Create("ascii.png")
-
+	src, err := loadImage(imgPath)
 	if err != nil {
 		return err
 	}
 
-	defer f.Close()
+	streamCtx := context.Background()
 
-	return png.Encode(f, asciiImg)
+	input, output, err := buildPipeline(streamCtx, src.Width, src.Height)
+	if err != nil {
+		return err
+	}
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	handleOutput(output, &wg)
+
+	bufferChan := make(chan *internalImage.RGBBuffer, 1)
+	input.Feed(streamCtx, bufferChan)
+	bufferChan <- src
+	close(bufferChan)
+
+	wg.Wait()
+
+	return nil
+}
+
+func buildPipeline(ctx context.Context, srcWidth, srcHeight int) (flow.Outlet[*internalImage.RGBBuffer], flow.Outlet[*internalImage.AsciiBuffer], error) {
+	resizeStage, err := resize.NewResizeStage(resize.WithWidth(width),
+		resize.WithAspectRatio(srcWidth, srcHeight, true),
+	)
+	if err != nil {
+		return flow.Outlet[*internalImage.RGBBuffer]{}, flow.Outlet[*internalImage.AsciiBuffer]{}, fmt.Errorf("internal error, %w", err)
+	}
+
+	grayscaleStage := grayscale.NewGrayscaleStage()
+	edgeStage := edge.NewSobelEdgeDetectionStage()
+	asciiStage := ascii.NewAsciiStage(ascii.WithInvert(invert), ascii.WithDensityCharset(getDensityCharSet(charset)))
+
+	edgeFilter := drawedge.NewEdgeFilter(drawedge.WithEdgeThreshold(edgeThreshold))
+	colorFilter := charcolor.NewColorFilter()
+
+	rawStream := flow.NewOutlet[*internalImage.RGBBuffer](10)
+	resizeStream := flow.Map(ctx, &rawStream, resizeStage)
+	resizeBranches := resizeStream.Branch(ctx, 2)
+
+	grayscaleStream := flow.Map(ctx, &resizeBranches[0], grayscaleStage)
+	var asciiStream flow.Outlet[*internalImage.AsciiBuffer]
+
+	if edgeFlag {
+		grayBranches := grayscaleStream.Branch(ctx, 2)
+		edgeStream := flow.Map(ctx, &grayBranches[0], edgeStage)
+		baseAsciiStream := flow.Map(ctx, &grayBranches[1], asciiStage)
+
+		edgeZip := flow.Zip(ctx, baseAsciiStream, edgeStream)
+		asciiStream = flow.Mask(ctx, edgeZip, edgeFilter)
+	} else {
+		asciiStream = flow.Map(ctx, &grayscaleStream, asciiStage)
+	}
+
+	colorZip := flow.Zip(ctx, asciiStream, resizeBranches[1])
+	finalStream := flow.Mask(ctx, colorZip, colorFilter)
+
+	return rawStream, finalStream, nil
+}
+
+func handleOutput(stream flow.Outlet[*internalImage.AsciiBuffer], wg *sync.WaitGroup) {
+	stream.Sink(func(ab *internalImage.AsciiBuffer, err error) {
+		defer wg.Done()
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+
+		if outputFormat == "text" {
+			var str strings.Builder
+
+			ab.ToString(&str, colotFlag)
+			fmt.Println(str.String())
+		} else {
+			if err := writeToFile("ascii.png", ab); err != nil {
+				fmt.Println("Couldn't write ascii art to file")
+			}
+		}
+	})
 }
