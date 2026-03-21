@@ -1,0 +1,33 @@
+project_name: ascii-gen
+
+builds:
+  - id: ascii-gen
+    main: ./cmd/ascii-gen
+    binary: ascii-gen
+    goos:
+      - linux
+      - windows
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+
+archives:
+  - id: default
+    builds:
+      - ascii-gen
+    format: tar.gz
+    format_overrides:
+      - goos: windows
+        format: zip
+    name_template: >
+      {{ .ProjectName }}_
+      {{ .Version }}_
+      {{ .Os }}_
+      {{ .Arch }}
+
+checksum:
+  name_template: "checksums.txt"
+
+changelog:
+  sort: asc
