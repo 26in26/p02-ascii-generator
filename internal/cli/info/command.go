@@ -23,7 +23,6 @@ func NewCommand() *cobra.Command {
 			fmt.Println("\nKey Features:")
 			fmt.Println("  - Optimized Performance: Uses integer arithmetic and bitwise operations.")
 			fmt.Println("  - Edge Detection: Uses Sobel operator to capture image structure.")
-			fmt.Println("  - Color Modes: Supports full 24-bit TrueColor and monochrome output.")
 			fmt.Println("  - Configurable: Adjustable dimensions, thresholds, and character sets.")
 		},
 	}

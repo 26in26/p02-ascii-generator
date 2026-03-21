@@ -3,6 +3,7 @@ package image
 import (
 	"image"
 	"image/color"
+	"image/draw"
 	"strconv"
 	"strings"
 
@@ -37,15 +38,34 @@ func (b *RGBBuffer) ToGray(grayBuffer *GrayBuffer) (*GrayBuffer, error) {
 	return dst, nil
 }
 
-func (b *AsciiBuffer) ToImage() image.Image {
+func (a *AsciiBuffer) ToImage(useColor bool) image.Image {
+	var img image.Image
+	if useColor {
+		img = a.ToImageWithFullColor()
+	} else {
+		img = a.ToImageWithSingleColor(255, 255, 255)
+	}
+
+	return img
+}
+
+func (a *AsciiBuffer) ToImageWithFullColor() image.Image {
 
 	const cellW = 7
 	const cellH = 13
 
-	imgWidth := b.buffer.Width * cellW
-	imgHeight := b.buffer.Height * cellH
+	imgWidth := a.buffer.Width * cellW
+	imgHeight := a.buffer.Height * cellH
 
 	img := image.NewRGBA(image.Rect(0, 0, imgWidth, imgHeight))
+
+	draw.Draw(
+		img,
+		img.Bounds(),
+		&image.Uniform{color.Black},
+		image.Point{},
+		draw.Src,
+	)
 
 	drawer := &font.Drawer{
 		Dst:  img,
@@ -53,15 +73,15 @@ func (b *AsciiBuffer) ToImage() image.Image {
 		Face: basicfont.Face7x13,
 	}
 
-	for y := 0; y < b.buffer.Height; y++ {
-		for x := 0; x < b.buffer.Width; x++ {
+	index := 0
 
-			i := y*b.buffer.Stride + x*4
+	for y := 0; y < a.buffer.Height; y++ {
+		for x := 0; x < a.buffer.Width; x++ {
 
-			ch := rune(b.buffer.Data[i])
-			r := b.buffer.Data[i+1]
-			g := b.buffer.Data[i+2]
-			b := b.buffer.Data[i+3]
+			ch := rune(a.buffer.Data[index])
+			r := a.buffer.Data[index+1]
+			g := a.buffer.Data[index+2]
+			b := a.buffer.Data[index+3]
 
 			drawer.Src = image.NewUniform(color.RGBA{r, g, b, 255})
 
@@ -72,6 +92,52 @@ func (b *AsciiBuffer) ToImage() image.Image {
 			drawer.Dot = fixed.P(px, py+13)
 
 			drawer.DrawString(string(ch))
+
+			index += 4
+		}
+	}
+
+	return img
+}
+
+func (a *AsciiBuffer) ToImageWithSingleColor(r, g, b byte) image.Image {
+	const cellW = 7
+	const cellH = 13
+
+	imgWidth := a.buffer.Width * cellW
+	imgHeight := a.buffer.Height * cellH
+
+	img := image.NewRGBA(image.Rect(0, 0, imgWidth, imgHeight))
+	draw.Draw(
+		img,
+		img.Bounds(),
+		&image.Uniform{color.Black},
+		image.Point{},
+		draw.Src,
+	)
+
+	drawer := &font.Drawer{
+		Dst:  img,
+		Src:  image.NewUniform(color.NRGBA{r, g, b, 255}),
+		Face: basicfont.Face7x13,
+	}
+
+	index := 0
+
+	for y := 0; y < a.buffer.Height; y++ {
+		for x := 0; x < a.buffer.Width; x++ {
+
+			ch := rune(a.buffer.Data[index])
+
+			px := x * cellW
+			py := y * cellH
+
+			// glyphs are drawn from the basline up (not top-left corner)
+			drawer.Dot = fixed.P(px, py+13)
+
+			drawer.DrawString(string(ch))
+
+			index += 4
 		}
 	}
 
@@ -80,21 +146,21 @@ func (b *AsciiBuffer) ToImage() image.Image {
 
 const RESET = "\x1b[0m"
 
-func (b *AsciiBuffer) ToString(str *strings.Builder, useColor bool) {
+func (a *AsciiBuffer) ToString(str *strings.Builder, useColor bool) {
 	if useColor {
-		b.ToStringWithColor(str)
+		a.ToStringWithColor(str)
 	} else {
-		b.ToStringWithoutColor(str)
+		a.ToStringWithoutColor(str)
 	}
 }
 
-func (b *AsciiBuffer) ToStringWithColor(str *strings.Builder) {
+func (a *AsciiBuffer) ToStringWithColor(str *strings.Builder) {
 	i := 0
 	var curR, curG, curB byte
 
-	for y := 0; y < b.buffer.Height; y++ {
-		for x := 0; x < b.buffer.Width; x++ {
-			char, r, g, b := b.Data[i], b.Data[i+1], b.Data[i+2], b.Data[i+3]
+	for y := 0; y < a.buffer.Height; y++ {
+		for x := 0; x < a.buffer.Width; x++ {
+			char, r, g, b := a.Data[i], a.Data[i+1], a.Data[i+2], a.Data[i+3]
 			printColor(str, curR, curG, curB, r, g, b)
 			curR, curG, curB = r, g, b
 			str.WriteByte(char)
@@ -105,12 +171,12 @@ func (b *AsciiBuffer) ToStringWithColor(str *strings.Builder) {
 	str.WriteString(RESET)
 }
 
-func (b *AsciiBuffer) ToStringWithoutColor(str *strings.Builder) {
+func (a *AsciiBuffer) ToStringWithoutColor(str *strings.Builder) {
 	i := 0
 
-	for y := 0; y < b.buffer.Height; y++ {
-		for x := 0; x < b.buffer.Width; x++ {
-			char := b.Data[i]
+	for y := 0; y < a.buffer.Height; y++ {
+		for x := 0; x < a.buffer.Width; x++ {
+			char := a.Data[i]
 			str.WriteByte(char)
 			i += 4
 		}

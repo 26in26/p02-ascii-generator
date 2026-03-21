@@ -3,6 +3,7 @@ package render
 import (
 	"errors"
 	"fmt"
+	"os"
 
 	"github.com/spf13/cobra"
 )
@@ -14,24 +15,60 @@ func commandValidation(cmd *cobra.Command, args []string) error {
 	if _, err := validateCharset(charset); err != nil {
 		return err
 	}
-	if resizeFlag != "" {
+
+	widthSet := cmd.Flags().Changed("width")
+	heightSet := cmd.Flags().Changed("height")
+	aspectRatioSet := cmd.Flags().Changed("aspect-ratio")
+	resizeSet := cmd.Flags().Changed("resize")
+
+	if resizeSet {
+		if widthSet || heightSet {
+			return errors.New("--resize cannot be combined with --width or --height")
+		}
+		if aspectRatioSet {
+			return errors.New("--resize cannot be combined with --aspect-ratio")
+		}
+
 		w, h, err := validateDimentions(resizeFlag)
 		if err != nil {
-			return err
+			return fmt.Errorf("resize: %w", err)
 		}
 		width = w
 		height = h
-	} else {
+		return nil
+	}
+
+	if !widthSet && !heightSet {
+		terminalWidth, err := getTerminalWidth()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error getting terminal width: %v\nUsing default width 190.\nYou can specify --width, --height or --resize flags instead.", err)
+			width = 190
+		}
+		width = terminalWidth
+	}
+
+	if widthSet {
 		if err := validateDimention(width); err != nil {
 			return fmt.Errorf("width: %w", err)
 		}
+	}
+
+	if heightSet {
 		if err := validateDimention(height); err != nil {
 			return fmt.Errorf("height: %w", err)
 		}
 	}
 
-	if _, _, err := validateDimentions(aspectRatio); err != nil {
-		return err
+	if aspectRatioSet {
+		if widthSet && heightSet {
+			return errors.New("--aspect-ratio cannot be combined with both --width and --height")
+		}
+		w, h, err := validateDimentions(aspectRatio)
+		if err != nil {
+			return fmt.Errorf("aspect-ratio: %w", err)
+		}
+		rWidth = w
+		rHeight = h
 	}
 
 	return nil

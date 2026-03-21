@@ -3,12 +3,15 @@ package render
 import (
 	"context"
 	"fmt"
+	"io"
+	"os"
 	"strings"
 	"sync"
 
 	"github.com/26in26/p02-ascii-generator/filters/charcolor"
 	"github.com/26in26/p02-ascii-generator/filters/drawedge"
 	internalImage "github.com/26in26/p02-ascii-generator/image"
+	"github.com/26in26/p02-ascii-generator/pipeline"
 	"github.com/26in26/p02-ascii-generator/pipeline/flow"
 	"github.com/26in26/p02-ascii-generator/stages/ascii"
 	"github.com/26in26/p02-ascii-generator/stages/edge"
@@ -24,9 +27,11 @@ var (
 	width         int
 	height        int
 	aspectRatio   string
-	edgeFlag      bool
+	rWidth        int
+	rHeight       int
+	edgeFlag      bool = true
 	edgeThreshold int
-	colotFlag     bool
+	colorFlag     bool = true
 	charset       string
 	invert        bool
 )
@@ -36,19 +41,19 @@ func NewCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "render",
 		Short:   "Render an image to ASCII art",
-		Long:    "Render an image to ASCII art with a variety of options.\nUnlocking youre ASCII dream! ",
+		Long:    "Render an image to ASCII art with a variety of options.\nUnlocking your ASCII dream! ",
 		Args:    cobra.ExactArgs(1),
 		PreRunE: commandValidation,
 		RunE:    run,
 	}
 
 	cmd.Flags().StringVarP(&outputPath, "output", "o", "", "Output file path, if not specified prints to the terminal")
-	cmd.Flags().StringVar(&outputFormat, "output-format", "text", "Format for output (image, text)")
+	cmd.Flags().StringVar(&outputFormat, "output-format", "text", "Format for output (text, image)")
 
-	cmd.Flags().StringVar(&resizeFlag, "resize", "", "Output new dimensions, resize overide width and height")
-	cmd.Flags().IntVar(&width, "width", 100, "Output width dimension")
-	cmd.Flags().IntVar(&height, "height", 100, "Output height dimension")
-	cmd.Flags().StringVar(&aspectRatio, "aspect-ratio", "1X1", "")
+	cmd.Flags().StringVar(&resizeFlag, "resize", "", "Output dimensions as WIDTHxHEIGHT. Exclusive with --width, --height, and --aspect-ratio")
+	cmd.Flags().IntVar(&width, "width", 0, "Target output width (in characters). Use with --aspect-ratio or automatically preserve image ratio")
+	cmd.Flags().IntVar(&height, "height", 0, "Target output height (in characters). Use with --aspect-ratio or automatically preserve image ratio")
+	cmd.Flags().StringVar(&aspectRatio, "aspect-ratio", "", "Output aspect ratio in WIDTHxHEIGHT. If not set, uses source image aspect ratio")
 
 	cmd.Flags().BoolFunc("edge", "Enable edge detection", func(s string) error {
 		edgeFlag = true
@@ -62,11 +67,18 @@ func NewCommand() *cobra.Command {
 	cmd.Flags().Lookup("no-edge").NoOptDefVal = "false"
 	cmd.Flags().IntVarP(&edgeThreshold, "threshold", "t", 23, "Edge detection threshold")
 
-	cmd.Flags().BoolVar(&colotFlag, "color", true, "Enable full color")
-	cmd.Flags().BoolVar(&colotFlag, "no-color", true, "Disable edge detection")
+	cmd.Flags().BoolFunc("color", "Enable full color support", func(s string) error {
+		colorFlag = true
+		return nil
+	})
+	cmd.Flags().Lookup("color").NoOptDefVal = "true"
+	cmd.Flags().BoolFunc("no-color", "Disable color support", func(s string) error {
+		colorFlag = false
+		return nil
+	})
 	cmd.Flags().Lookup("no-color").NoOptDefVal = "false"
 
-	cmd.Flags().StringVar(&charset, "charset", "standard", "")
+	cmd.Flags().StringVar(&charset, "charset", "standard", "charset for ascii art (standard, dense, dots)")
 	cmd.Flags().BoolVar(&invert, "invert", false, "Invert brightness to character mapping")
 
 	return cmd
@@ -82,7 +94,12 @@ func run(cmd *cobra.Command, args []string) error {
 
 	streamCtx := context.Background()
 
-	input, output, err := buildPipeline(streamCtx, src.Width, src.Height)
+	if aspectRatio == "" {
+		rWidth = src.Width
+		rHeight = src.Height
+	}
+
+	input, output, err := buildPipeline(streamCtx, rWidth, rHeight)
 	if err != nil {
 		return err
 	}
@@ -102,10 +119,18 @@ func run(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func buildPipeline(ctx context.Context, srcWidth, srcHeight int) (flow.Outlet[*internalImage.RGBBuffer], flow.Outlet[*internalImage.AsciiBuffer], error) {
-	resizeStage, err := resize.NewResizeStage(resize.WithWidth(width),
-		resize.WithAspectRatio(srcWidth, srcHeight, true),
-	)
+func buildPipeline(ctx context.Context, rWidth, rHeight int) (flow.Outlet[*internalImage.RGBBuffer], flow.Outlet[*internalImage.AsciiBuffer], error) {
+	var resizeStage pipeline.Stage[*internalImage.RGBBuffer, *internalImage.RGBBuffer]
+	var err error
+
+	if width > 0 && height > 0 {
+		resizeStage, err = resize.NewResizeStage(resize.With(width, height))
+	} else if width > 0 {
+		resizeStage, err = resize.NewResizeStage(resize.WithWidth(width), resize.WithAspectRatio(rWidth, rHeight, true))
+	} else {
+		resizeStage, err = resize.NewResizeStage(resize.WithHeight(height), resize.WithAspectRatio(rWidth, rHeight, false))
+	}
+
 	if err != nil {
 		return flow.Outlet[*internalImage.RGBBuffer]{}, flow.Outlet[*internalImage.AsciiBuffer]{}, fmt.Errorf("internal error, %w", err)
 	}
@@ -149,14 +174,30 @@ func handleOutput(stream flow.Outlet[*internalImage.AsciiBuffer], wg *sync.WaitG
 			return
 		}
 
+		var asciiArtWriter io.Writer
+
+		if outputPath != "" {
+			f, err := os.Create(outputPath)
+			if err != nil {
+				fmt.Println("Couldn't create file")
+				return
+			}
+			defer f.Close()
+			asciiArtWriter = f
+		} else {
+			asciiArtWriter = os.Stdout
+		}
+
 		if outputFormat == "text" {
 			var str strings.Builder
 
-			ab.ToString(&str, colotFlag)
-			fmt.Println(str.String())
+			ab.ToString(&str, colorFlag)
+			if _, err := fmt.Fprint(asciiArtWriter, str.String()); err != nil {
+				fmt.Printf("Couldn't write ascii art %s", outputFormat)
+			}
 		} else {
-			if err := writeToFile("ascii.png", ab); err != nil {
-				fmt.Println("Couldn't write ascii art to file")
+			if err := writePngImage(asciiArtWriter, ab, colorFlag); err != nil {
+				fmt.Printf("Couldn't write ascii art %s", outputFormat)
 			}
 		}
 	})

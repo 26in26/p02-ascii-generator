@@ -34,7 +34,7 @@ type DensityCharset byte
 const (
 	StandardCharset DensityCharset = iota
 	DenseCharset
-	DotsCharset
+	BlocksCharset
 )
 
 func WithDensityCharset(charset DensityCharset) optFunc {
@@ -43,9 +43,9 @@ func WithDensityCharset(charset DensityCharset) optFunc {
 		case StandardCharset:
 			o.densityCharset = []byte(DEFAULT_CHARSET)
 		case DenseCharset:
-			o.densityCharset = []byte(" .-=+*x#$&X@")
-		case DotsCharset:
-			o.densityCharset = []byte("  ·•")
+			o.densityCharset = []byte(" .'`^\",:;Il!i~+_-?][}{1)(|\\/tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$")
+		case BlocksCharset:
+			o.densityCharset = []byte(".oO0#@")
 		}
 
 	}

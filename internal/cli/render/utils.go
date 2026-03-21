@@ -3,11 +3,13 @@ package render
 import (
 	"fmt"
 	"image/png"
+	"io"
 	"os"
 
 	internalImage "github.com/26in26/p02-ascii-generator/image"
 	"github.com/26in26/p02-ascii-generator/stages/ascii"
 	"github.com/26in26/p02-ascii-generator/utils/imageio"
+	"golang.org/x/term"
 )
 
 func loadImage(imgPath string) (*internalImage.RGBBuffer, error) {
@@ -23,17 +25,10 @@ func loadImage(imgPath string) (*internalImage.RGBBuffer, error) {
 	return src, nil
 }
 
-func writeToFile(path string, ascii *internalImage.AsciiBuffer) error {
-	asciiImg := ascii.ToImage()
-	f, err := os.Create(path)
+func writePngImage(w io.Writer, ascii *internalImage.AsciiBuffer, useColor bool) error {
+	asciiImg := ascii.ToImage(useColor)
 
-	if err != nil {
-		return err
-	}
-
-	defer f.Close()
-
-	return png.Encode(f, asciiImg)
+	return png.Encode(w, asciiImg)
 }
 
 func getDensityCharSet(charsetName string) ascii.DensityCharset {
@@ -42,9 +37,26 @@ func getDensityCharSet(charsetName string) ascii.DensityCharset {
 		return ascii.StandardCharset
 	case "dense":
 		return ascii.DenseCharset
-	case "dots":
-		return ascii.DotsCharset
+	case "blocks":
+		return ascii.BlocksCharset
 	default:
 		return ascii.StandardCharset
 	}
+}
+
+func getTerminalWidth() (int, error) {
+	fd := int(os.Stdout.Fd())
+
+	// Check if the file descriptor is a terminal before attempting to get the size
+	if !term.IsTerminal(fd) {
+		return 0, fmt.Errorf("Not running in a terminal, cannot get size.")
+	}
+
+	width, _, err := term.GetSize(fd)
+	if err != nil {
+
+		return 0, fmt.Errorf("Error getting terminal size: %w", err)
+	}
+
+	return width, nil
 }
