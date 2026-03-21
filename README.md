@@ -27,8 +27,8 @@ Build a high-performance package that encapsulates image processing techniques t
 - [X] Design
 - [X] POC
 - [X] Core implementation
-- [ ] Tests
-- [ ] Documentation
+- [X] Tests
+- [X] Documentation
 
 ## 🛠 Tech Stack
 - Language: Go
@@ -72,6 +72,8 @@ This became a case of endless nitpicking rather than solving a real problem. The
 3. **Technical debt is only debt when it causes problems:** The original structure wasn't unmaintainable or confusing in practice. Refactoring it wasn't fixing a bug—it was creating churn.
 
 4. **Time allocation matters:** Spending ~30% of the project on architecture refinement when the feature works teaches a hard lesson about shipping. The time would have been better spent on optimization, testing, or documentation.
+
+5. **Runtime vs performance tradeoffs:** Lots of times in order to get well written and readable code you trade off preformance for readability and vice versa (which is important in this case).
 
 ### Takeaway
 
